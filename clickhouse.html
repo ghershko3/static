@@ -1,1 +1,901 @@
-<h1>TEST</h1>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClickHouse Internals</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+:root{
+  --bg:#111318;--sf:#1c1f26;--sf2:#252830;--sf3:#2e3240;
+  --bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.13);
+  --t1:#f0f2f7;--t2:#8891a8;--t3:#454d62;
+  --blue:#5b8dee;--blue-s:rgba(91,141,238,0.1);--blue-b:rgba(91,141,238,0.22);
+  --green:#34c77b;--gs:rgba(52,199,123,0.1);
+  --amber:#f0a130;--as:rgba(240,161,48,0.1);
+  --red:#e8534a;--rs:rgba(232,83,74,0.1);
+  --purple:#9d7fe8;
+}
+body{background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;font-size:14px;line-height:1.6}
+
+nav{position:sticky;top:0;z-index:200;background:rgba(17,19,24,0.9);backdrop-filter:blur(16px);border-bottom:1px solid var(--bd);height:52px;display:flex;align-items:center;padding:0 28px;gap:2px;overflow-x:auto}
+.nbrand{display:flex;align-items:center;gap:8px;margin-right:24px;flex-shrink:0}
+.nicon{width:28px;height:28px;border-radius:7px;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;font-family:'Fira Code',monospace;flex-shrink:0}
+.nname{font-size:13px;font-weight:600;color:var(--t1);white-space:nowrap}
+nav a{font-size:12.5px;font-weight:500;color:var(--t3);text-decoration:none;padding:6px 12px;border-radius:7px;white-space:nowrap;flex-shrink:0;transition:color .15s,background .15s}
+nav a:hover{color:var(--t2);background:var(--sf)}
+nav a.on{color:var(--t1);background:var(--sf2)}
+
+.page{max-width:860px;margin:0 auto;padding:0 24px 80px}
+.hero{padding:52px 0 44px;border-bottom:1px solid var(--bd);margin-bottom:48px}
+.hpill{display:inline-flex;align-items:center;gap:6px;background:var(--sf2);border:1px solid var(--bd2);border-radius:20px;padding:4px 12px 4px 8px;font-size:11.5px;font-weight:500;color:var(--t2);margin-bottom:20px}
+.hpill-dot{width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.hero h1{font-size:clamp(28px,5vw,42px);font-weight:600;line-height:1.15;letter-spacing:-.025em;margin-bottom:14px}
+.hero h1 span{color:var(--blue)}
+.hero p{font-size:14px;color:var(--t2);max-width:460px;line-height:1.75}
+
+.section{margin-bottom:52px;scroll-margin-top:68px}
+.sh{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.sh-num{font-family:'Fira Code',monospace;font-size:10px;color:var(--blue);background:var(--blue-s);border:1px solid var(--blue-b);padding:2px 7px;border-radius:4px;font-weight:500}
+.sh h2{font-size:17px;font-weight:600;letter-spacing:-.01em}
+
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:16px 18px;margin-bottom:10px}
+.card.hl-blue{border-color:var(--blue-b);background:linear-gradient(135deg,var(--blue-s),var(--sf) 60%)}
+.card.hl-red{border-color:rgba(232,83,74,.22);background:linear-gradient(135deg,var(--rs),var(--sf) 60%)}
+.card.hl-green{border-color:rgba(52,199,123,.22);background:linear-gradient(135deg,var(--gs),var(--sf) 60%)}
+.card.hl-amber{border-color:rgba(240,161,48,.22);background:linear-gradient(135deg,var(--as),var(--sf) 60%)}
+.ct{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:5px;letter-spacing:.01em}
+.cb{font-size:13px;color:var(--t2);line-height:1.7}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:560px){.g2{grid-template-columns:1fr}}
+
+.code{background:#0d0f14;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;font-family:'Fira Code',monospace;font-size:12px;color:#8ba0c0;line-height:1.9;margin:10px 0;overflow-x:auto;white-space:pre}
+.code .kw{color:#82aaff}.code .fn{color:#89ddff}.code .cm{color:#3d4a5e}.code .str{color:#c3e88d}.code .num{color:var(--amber)}
+code{font-family:'Fira Code',monospace;font-size:11.5px;color:var(--blue);background:var(--blue-s);padding:1px 5px;border-radius:4px}
+
+.badge{display:inline-flex;align-items:center;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:5px;letter-spacing:.02em}
+.b-ok{background:var(--gs);color:var(--green);border:1px solid rgba(52,199,123,.2)}
+.b-warn{background:var(--as);color:var(--amber);border:1px solid rgba(240,161,48,.2)}
+.b-danger{background:var(--rs);color:var(--red);border:1px solid rgba(232,83,74,.2)}
+.b-info{background:var(--blue-s);color:var(--blue);border:1px solid var(--blue-b)}
+.b-dim{background:var(--sf2);color:var(--t3);border:1px solid var(--bd)}
+
+/* ── TRY IT BUTTON ── */
+.try-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:500;
+  background:var(--blue-s);border:1px solid var(--blue-b);
+  color:var(--blue);padding:3px 10px;border-radius:6px;cursor:pointer;
+  transition:background .15s;vertical-align:middle;margin-left:8px;
+  font-family:'Inter',sans-serif;
+}
+.try-btn:hover{background:rgba(91,141,238,0.18)}
+.try-btn::before{content:'▶';font-size:8px}
+
+/* ── POPUP OVERLAY ── */
+.popup-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(8,10,16,0.75);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.popup-overlay.open{display:flex}
+.popup{
+  background:var(--sf);border:1px solid var(--bd2);border-radius:16px;
+  width:100%;max-width:560px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 64px rgba(0,0,0,.6);
+}
+.popup::-webkit-scrollbar{width:4px}
+.popup::-webkit-scrollbar-thumb{background:var(--sf3);border-radius:2px}
+.popup-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--bd);
+  position:sticky;top:0;background:var(--sf);z-index:1;
+}
+.popup-head-left{display:flex;flex-direction:column;gap:2px}
+.popup-title{font-size:14px;font-weight:600;color:var(--t1)}
+.popup-sub{font-size:11.5px;color:var(--t3)}
+.popup-close{
+  width:28px;height:28px;border-radius:7px;background:var(--sf2);
+  border:1px solid var(--bd);color:var(--t2);font-size:16px;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:background .12s;flex-shrink:0;
+}
+.popup-close:hover{background:var(--sf3);color:var(--t1)}
+.popup-body{padding:20px}
+
+/* ── DEMO INTERNALS ── */
+.demo-hint{font-size:12.5px;color:var(--t2);line-height:1.65;margin-bottom:16px;padding:10px 12px;background:var(--sf2);border-radius:8px;border-left:2px solid var(--blue)}
+.demo-ctrls{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;align-items:center}
+.demo-ctrls label{font-size:11.5px;color:var(--t2)}
+.demo-ctrls input[type=range]{accent-color:var(--blue)}
+.demo-ctrls select{font-family:'Inter',sans-serif;font-size:12px;background:var(--sf2);border:1px solid var(--bd2);color:var(--t1);padding:5px 9px;border-radius:7px;cursor:pointer}
+.demo-out{background:#0d0f14;border:1px solid var(--bd);border-radius:8px;padding:12px 14px;font-family:'Fira Code',monospace;font-size:11.5px;color:var(--t2);line-height:1.9;margin-top:12px;min-height:36px}
+.demo-out .hi{color:var(--green);font-weight:600}
+.demo-out .sk{color:var(--t3);text-decoration:line-through}
+.demo-out .ac{color:var(--blue)}
+.demo-out .wn{color:var(--amber)}
+.demo-out .er{color:var(--red)}
+
+/* granule grid */
+.ggrid{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0}
+.gran{width:40px;height:40px;border-radius:6px;border:1px solid;display:flex;align-items:center;justify-content:center;font-family:'Fira Code',monospace;font-size:9.5px;font-weight:500;transition:all .2s}
+.g-skip{background:var(--sf3);border-color:var(--bd);color:var(--t3)}
+.g-read{background:var(--blue-s);border-color:var(--blue-b);color:var(--blue)}
+.g-hit{background:var(--gs);border-color:rgba(52,199,123,.3);color:var(--green)}
+.gleg{display:flex;gap:12px;font-size:11px;color:var(--t2);margin-top:6px;flex-wrap:wrap}
+.gleg span{display:flex;align-items:center;gap:5px}
+.dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+
+/* dedup table */
+.dtab{width:100%;border-collapse:collapse;font-family:'Fira Code',monospace;font-size:11px}
+.dtab th{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);padding:5px 8px;border-bottom:1px solid var(--bd);text-align:left;font-family:'Inter',sans-serif}
+.dtab td{padding:5px 8px;border-bottom:1px solid var(--bd)}
+.dtab tr:last-child td{border-bottom:none}
+.r-dup{opacity:.3;text-decoration:line-through;color:var(--t3)}
+.r-kept{color:var(--green)}
+.r-new{animation:rin .25s ease;color:var(--blue)}
+@keyframes rin{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.tcol{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+.tlbl{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--t3);margin-bottom:5px}
+.tbox{background:var(--sf2);border:1px solid var(--bd);border-radius:8px;overflow:hidden}
+
+/* partition map */
+.pmap{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:10px 0}
+.pcell{border-radius:7px;border:1px solid;padding:7px 5px;text-align:center;transition:all .25s}
+.pc-on{background:var(--blue-s);border-color:var(--blue-b)}
+.pc-off{background:var(--sf3);border-color:var(--bd);opacity:.35}
+.pcm{font-size:9.5px;font-family:'Fira Code',monospace;color:var(--t2);margin-bottom:2px}
+.pcr{font-size:11px;font-weight:600;font-family:'Fira Code',monospace}
+.pc-on .pcr{color:var(--blue)}.pc-off .pcr{color:var(--t3)}
+
+/* ORDER BY bars */
+.obbar{margin:5px 0}
+.obbar-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--t2);margin-bottom:3px}
+.obbar-track{height:18px;background:var(--sf3);border-radius:4px;overflow:hidden}
+.obbar-fill{height:100%;border-radius:4px;transition:width .5s ease;display:flex;align-items:center;padding-left:7px}
+.obbar-fill span{font-family:'Fira Code',monospace;font-size:9.5px;font-weight:600;color:#fff}
+
+/* replication nodes */
+.rnodes{display:flex;gap:8px;margin:10px 0;flex-wrap:wrap}
+.rnode{flex:1;min-width:100px;background:var(--sf2);border:1px solid var(--bd);border-radius:10px;padding:10px;text-align:center;transition:all .3s}
+.rnode-name{font-size:10px;font-weight:600;color:var(--t1);margin-bottom:4px}
+.rnode-count{font-family:'Fira Code',monospace;font-size:22px;font-weight:700;margin-bottom:2px;line-height:1;transition:color .3s}
+.rnode-status{font-size:9.5px;color:var(--t3)}
+.rnode.syncing{border-color:var(--blue-b);background:var(--blue-s)}
+.rnode.syncing .rnode-count{color:var(--blue)}
+.rnode.lag{border-color:rgba(240,161,48,.3);background:var(--as)}
+.rnode.lag .rnode-count{color:var(--amber)}
+.rnode.ok .rnode-count{color:var(--green)}
+
+/* SIM */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.stat{background:var(--sf);border:1px solid var(--bd);border-radius:10px;padding:12px 14px}
+.stat-val{font-size:22px;font-weight:700;font-family:'Fira Code',monospace;letter-spacing:-.02em;line-height:1}
+.stat-lbl{font-size:11px;color:var(--t3);margin-top:5px;font-weight:500;letter-spacing:.03em;text-transform:uppercase}
+.controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+button{font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;padding:7px 16px;border-radius:8px;cursor:pointer;background:var(--sf2);border:1px solid var(--bd2);color:var(--t2);transition:all .15s}
+button:hover{background:var(--sf3);color:var(--t1)}
+button.go{background:var(--gs);border-color:rgba(52,199,123,.3);color:var(--green)}
+button.storm{background:var(--rs);border-color:rgba(232,83,74,.3);color:var(--red)}
+button.rst{margin-left:auto;color:var(--t3)}
+.pw{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:14px 16px;margin-bottom:10px}
+.pw-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.pw-lbl{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase}
+.parts-area{display:flex;flex-wrap:wrap;gap:4px;min-height:36px;align-items:flex-start}
+.chip{font-family:'Fira Code',monospace;font-size:9.5px;font-weight:500;padding:2px 7px;border-radius:5px;border:1px solid;animation:ci .15s ease}
+@keyframes ci{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:scale(1)}}
+.cn{background:var(--blue-s);color:var(--blue);border-color:var(--blue-b)}
+.cm2{background:var(--sf3);color:var(--t3);border-color:var(--bd)}
+.cmt{background:var(--as);color:var(--amber);border-color:rgba(240,161,48,.25);animation:ci .15s ease,pl .5s ease-in-out infinite}
+@keyframes pl{0%,100%{opacity:1}50%{opacity:.25}}
+.brow{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:11px;color:var(--t3)}
+.btrack{flex:1;height:4px;background:var(--sf3);border-radius:2px;overflow:hidden}
+.bfill{height:100%;border-radius:2px;transition:width .35s,background .35s}
+.lp{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:12px 16px}
+.lt{font-size:11px;font-weight:600;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+.lb{background:#0d0f14;border-radius:8px;padding:10px 12px;max-height:108px;overflow-y:auto;font-family:'Fira Code',monospace;font-size:11px;color:var(--t3);line-height:1.9}
+.lb::-webkit-scrollbar{width:3px}.lb::-webkit-scrollbar-thumb{background:var(--sf3);border-radius:2px}
+.lok{color:var(--green)}.lwarn{color:var(--amber)}.lerr{color:var(--red)}
+
+/* engines */
+.eng{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:18px 20px;margin-bottom:10px;position:relative;overflow:hidden}
+.eng::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.e-blue::before{background:var(--blue)}.e-green::before{background:var(--green)}
+.e-purple::before{background:var(--purple)}.e-dim::before{background:var(--sf3)}
+.ehead{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.ename{font-size:14px;font-weight:600}
+.esub{font-size:12px;color:var(--t3);margin-bottom:10px}
+.edesc{font-size:13px;color:var(--t2);line-height:1.65;margin-bottom:10px}
+.euse{display:flex;align-items:flex-start;gap:8px;background:var(--sf2);border-radius:8px;padding:10px 12px;font-size:12.5px;color:var(--t2);line-height:1.6;margin-bottom:10px}
+.euse-label{font-size:10px;font-weight:600;color:var(--green);letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;padding-top:2px;min-width:56px}
+.evars{border-top:1px solid var(--bd);padding-top:12px;margin-top:2px;display:flex;flex-direction:column;gap:7px}
+.vr{display:flex;gap:12px;font-size:12.5px}
+.vn{font-family:'Fira Code',monospace;font-size:11px;font-weight:500;color:var(--t1);min-width:185px;flex-shrink:0;padding-top:2px}
+.vd{color:var(--t2);line-height:1.55}
+
+/* deep dive */
+.dd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+@media(max-width:560px){.dd-grid{grid-template-columns:1fr}}
+.dd-card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:14px 16px}
+.dd-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px}
+.dd-val{font-family:'Fira Code',monospace;font-size:18px;font-weight:600;margin-bottom:4px;line-height:1}
+.dd-desc{font-size:12px;color:var(--t2);line-height:1.55}
+.rule-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.rule-row:last-child{border-bottom:none}
+.rule-icon{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+.ri-ok{background:var(--gs);color:var(--green)}.ri-bad{background:var(--rs);color:var(--red)}.ri-tip{background:var(--blue-s);color:var(--blue)}
+.rule-body{color:var(--t2);line-height:1.6}
+.rule-body strong{color:var(--t1);font-weight:500}
+
+/* detect */
+.dtbl{width:100%;border-collapse:collapse}
+.dtbl th{font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--t3);padding:8px 14px;border-bottom:1px solid var(--bd);text-align:left}
+.dtbl td{padding:10px 14px;border-bottom:1px solid var(--bd);font-size:12.5px;vertical-align:middle}
+.dtbl td:first-child{font-family:'Fira Code',monospace;font-size:11.5px;color:var(--blue);font-weight:500}
+.dtbl td:nth-child(2){color:var(--t2)}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:var(--sf2)}
+
+footer{text-align:center;font-size:11.5px;color:var(--t3);padding:28px 0;border-top:1px solid var(--bd);margin-top:16px}
+</style>
+</head>
+<body>
+
+<!-- ═══════ POPUPS ═══════ -->
+
+<!-- Popup: Granule skipping -->
+<div class="popup-overlay" id="pop-granule" onclick="closePopup(event,'pop-granule')">
+  <div class="popup">
+    <div class="popup-head">
+      <div class="popup-head-left">
+        <div class="popup-title">How the index skips data</div>
+        <div class="popup-sub">Drag the range to see which months get read</div>
+      </div>
+      <div class="popup-close" onclick="closePopupById('pop-granule')">✕</div>
+    </div>
+    <div class="popup-body">
+      <div class="demo-hint">The index stores one entry per <strong style="color:var(--t1)">8,192 rows</strong>. When you run a query with a date filter, ClickHouse checks the index and skips entire blocks (granules) that can't contain matching rows — without reading them from disk.</div>
+      <div class="demo-ctrls" style="flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;gap:10px;width:100%">
+          <label style="min-width:40px">From</label>
+          <input type="range" min="0" max="11" value="2" id="gs" oninput="uGran()" style="flex:1">
+          <strong id="gs-lbl" style="font-family:'Fira Code',monospace;font-size:12px;color:var(--t1);min-width:28px">Mar</strong>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;width:100%">
+          <label style="min-width:40px">To</label>
+          <input type="range" min="0" max="11" value="4" id="ge" oninput="uGran()" style="flex:1">
+          <strong id="ge-lbl" style="font-family:'Fira Code',monospace;font-size:12px;color:var(--t1);min-width:28px">May</strong>
+        </div>
+      </div>
+      <div class="ggrid" id="ggrid"></div>
+      <div class="gleg">
+        <span><span class="dot" style="background:var(--sf3);border:1px solid var(--bd)"></span>Skipped — never read</span>
+        <span><span class="dot" style="background:var(--blue-s);border:1px solid var(--blue-b)"></span>Read</span>
+        <span><span class="dot" style="background:var(--gs);border:1px solid rgba(52,199,123,.3)"></span>Has results</span>
+      </div>
+      <div class="demo-out" id="gran-out"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: Partition pruning -->
+<div class="popup-overlay" id="pop-partition" onclick="closePopup(event,'pop-partition')">
+  <div class="popup">
+    <div class="popup-head">
+      <div class="popup-head-left">
+        <div class="popup-title">Partition pruning</div>
+        <div class="popup-sub">Select a date range — skipped partitions never open</div>
+      </div>
+      <div class="popup-close" onclick="closePopupById('pop-partition')">✕</div>
+    </div>
+    <div class="popup-body">
+      <div class="demo-hint">Table is partitioned by month. Each cell below is a <strong style="color:var(--t1)">separate folder on disk</strong>. When you filter by date, ClickHouse skips every partition outside your range — it never even opens those files.</div>
+      <div class="demo-ctrls">
+        <select id="ps" onchange="uPart()" style="font-size:12px;padding:6px 9px">
+          <option value="0">Jan</option><option value="1">Feb</option><option value="2" selected>Mar</option>
+          <option value="3">Apr</option><option value="4">May</option><option value="5">Jun</option>
+          <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
+          <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+        </select>
+        <span style="color:var(--t3)">→</span>
+        <select id="pe" onchange="uPart()" style="font-size:12px;padding:6px 9px">
+          <option value="0">Jan</option><option value="1">Feb</option><option value="2">Mar</option>
+          <option value="3">Apr</option><option value="4" selected>May</option><option value="5">Jun</option>
+          <option value="6">Jul</option><option value="7">Aug</option><option value="8">Sep</option>
+          <option value="9">Oct</option><option value="10">Nov</option><option value="11">Dec</option>
+        </select>
+      </div>
+      <div class="pmap" id="pmap"></div>
+      <div class="demo-out" id="part-out"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: ReplacingMergeTree -->
+<div class="popup-overlay" id="pop-replacing" onclick="closePopup(event,'pop-replacing')">
+  <div class="popup">
+    <div class="popup-head">
+      <div class="popup-head-left">
+        <div class="popup-title">ReplacingMergeTree in action</div>
+        <div class="popup-sub">Insert updates, then merge to deduplicate</div>
+      </div>
+      <div class="popup-close" onclick="closePopupById('pop-replacing')">✕</div>
+    </div>
+    <div class="popup-body">
+      <div class="demo-hint">Every insert creates a new row — even for the same user. <strong style="color:var(--amber)">Before merge</strong>, all versions exist and duplicates are visible. <strong style="color:var(--green)">After merge</strong>, only the latest row per user survives.</div>
+      <div class="demo-ctrls">
+        <button onclick="rInsert('alice')" style="font-size:12px;padding:5px 12px">+ alice</button>
+        <button onclick="rInsert('bob')" style="font-size:12px;padding:5px 12px">+ bob</button>
+        <button onclick="rInsert('carol')" style="font-size:12px;padding:5px 12px">+ carol</button>
+        <button onclick="rMerge()" style="font-size:12px;padding:5px 12px;background:var(--gs);border-color:rgba(52,199,123,.3);color:var(--green)">Run merge</button>
+        <button onclick="rReset()" style="font-size:12px;padding:5px 10px;color:var(--t3)">Reset</button>
+      </div>
+      <div class="tcol">
+        <div>
+          <div class="tlbl">Before merge</div>
+          <div class="tbox"><table class="dtab"><thead><tr><th>user</th><th>score</th><th>ver</th></tr></thead><tbody id="r-raw"></tbody></table></div>
+        </div>
+        <div>
+          <div class="tlbl">After merge</div>
+          <div class="tbox"><table class="dtab"><thead><tr><th>user</th><th>score</th><th>ver</th></tr></thead><tbody id="r-merged"></tbody></table></div>
+        </div>
+      </div>
+      <div class="demo-out" id="r-out" style="font-size:11.5px">Insert some rows, then run merge.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: ORDER BY -->
+<div class="popup-overlay" id="pop-orderby" onclick="closePopup(event,'pop-orderby')">
+  <div class="popup">
+    <div class="popup-head">
+      <div class="popup-head-left">
+        <div class="popup-title">ORDER BY and scan cost</div>
+        <div class="popup-sub">The sort key determines how much data gets read</div>
+      </div>
+      <div class="popup-close" onclick="closePopupById('pop-orderby')">✕</div>
+    </div>
+    <div class="popup-body">
+      <div class="demo-hint">The index only helps when your WHERE filter starts with the <strong style="color:var(--t1)">leading column</strong> of ORDER BY. Get it wrong and ClickHouse reads the entire table — even if you only want one row.</div>
+      <div class="demo-ctrls">
+        <label>Your filter:</label>
+        <select id="ob" onchange="uOB()" style="font-size:12px;padding:6px 9px">
+          <option value="date">WHERE date = '2024-03-15'</option>
+          <option value="user">WHERE user_id = 'u_4821'</option>
+          <option value="both">WHERE date = … AND user_id = …</option>
+          <option value="event">WHERE event_type = 'click'</option>
+        </select>
+      </div>
+      <div style="font-size:10.5px;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Granules read — ORDER BY (date, user_id, event_type)</div>
+      <div id="ob-bars"></div>
+      <div class="demo-out" id="ob-out" style="font-size:11.5px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Popup: Replication -->
+<div class="popup-overlay" id="pop-replication" onclick="closePopup(event,'pop-replication')">
+  <div class="popup">
+    <div class="popup-head">
+      <div class="popup-head-left">
+        <div class="popup-title">Replication lag</div>
+        <div class="popup-sub">Watch replicas sync after an insert</div>
+      </div>
+      <div class="popup-close" onclick="closePopupById('pop-replication')">✕</div>
+    </div>
+    <div class="popup-body">
+      <div class="demo-hint">An insert lands on <strong style="color:var(--t1)">Replica 1</strong> and gets registered in ZooKeeper. The other replicas see the new entry and fetch the part in the background. High network lag means they temporarily serve <strong style="color:var(--amber)">stale data</strong>.</div>
+      <div class="demo-ctrls" style="gap:10px">
+        <label>Network lag:</label>
+        <input type="range" min="0" max="4" value="1" id="rl" oninput="document.getElementById('rl-lbl').textContent=['none','50ms','200ms','800ms','3s'][+this.value]" style="width:130px">
+        <strong id="rl-lbl" style="font-family:'Fira Code',monospace;font-size:12px;color:var(--t1);min-width:36px">50ms</strong>
+      </div>
+      <div class="demo-ctrls">
+        <button onclick="rSimInsert()" style="font-size:12px;padding:5px 14px">Insert batch</button>
+        <button onclick="rSimReset()" style="font-size:12px;padding:5px 10px;color:var(--t3)">Reset</button>
+      </div>
+      <div class="rnodes" id="rnodes"></div>
+      <div class="demo-out" id="rsim-out" style="font-size:11.5px">Press "Insert batch" to start.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ NAV ═══════ -->
+<nav>
+  <div class="nbrand">
+    <div class="nicon">CH</div>
+    <span class="nname">Internals</span>
+  </div>
+  <a href="#sim" class="on">Simulation</a>
+  <a href="#writes">Writes</a>
+  <a href="#parts">Parts</a>
+  <a href="#mutations">Mutations</a>
+  <a href="#engines">Engines</a>
+  <a href="#deepdive">Deep dive</a>
+  <a href="#detect">Detect</a>
+</nav>
+
+<div class="page">
+
+  <div class="hero">
+    <div class="hpill"><span class="hpill-dot"></span>Interactive guide</div>
+    <h1>How <span>ClickHouse</span><br>actually works</h1>
+    <p>Immutable parts. Background merges. Heavy mutations. The right engine for the job — explained simply.</p>
+  </div>
+
+  <!-- ── SIM ── -->
+  <div class="section" id="sim">
+    <div class="sh"><span class="sh-num">sim</span><h2>Live simulation</h2></div>
+    <div class="controls">
+      <button id="btn-normal" onclick="setMode('normal')">Normal inserts</button>
+      <button id="btn-storm" onclick="setMode('storm')">Insert storm</button>
+      <button onclick="triggerMutation()">Run mutation</button>
+      <button class="rst" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="st-parts" style="color:var(--green)">0</div><div class="stat-lbl">Active parts</div></div>
+      <div class="stat"><div class="stat-val" id="st-merges" style="color:var(--blue)">0</div><div class="stat-lbl">Merges done</div></div>
+      <div class="stat"><div class="stat-val" id="st-mut" style="color:var(--t3)">—</div><div class="stat-lbl">Mutation</div></div>
+    </div>
+    <div class="pw">
+      <div class="pw-top"><span class="pw-lbl">Parts on disk</span><span id="hbadge" class="badge b-ok">Healthy</span></div>
+      <div class="parts-area" id="parts-area"></div>
+      <div class="brow">
+        <span style="min-width:72px;font-weight:500">Part count</span>
+        <div class="btrack"><div class="bfill" id="meter" style="background:var(--green);width:0%"></div></div>
+        <span id="mlbl" style="min-width:44px;text-align:right;font-family:'Fira Code',monospace">0/300</span>
+      </div>
+    </div>
+    <div class="card hl-amber" id="mut-panel" style="display:none;margin-bottom:10px">
+      <div class="ct">Mutation running — <code>ALTER TABLE … UPDATE</code></div>
+      <div class="brow" style="margin-top:8px">
+        <span style="min-width:72px">Parts done</span>
+        <div class="btrack"><div class="bfill" id="mut-fill" style="background:var(--amber);width:0%"></div></div>
+        <span id="mut-lbl" style="min-width:44px;text-align:right;font-family:'Fira Code',monospace">0/0</span>
+      </div>
+      <div id="mut-note" style="font-size:11.5px;color:var(--t2);margin-top:6px">Rewriting every affected part from scratch.</div>
+    </div>
+    <div class="lp"><div class="lt">Activity log</div><div class="lb" id="log"></div></div>
+  </div>
+
+  <!-- ── WRITES ── -->
+  <div class="section" id="writes">
+    <div class="sh"><span class="sh-num">01</span><h2>How writes work</h2></div>
+    <div class="g2">
+      <div class="card hl-blue">
+        <div class="ct">Every INSERT = a new part</div>
+        <div class="cb">ClickHouse never edits existing data. Each insert creates a new sorted, immutable, compressed directory on disk instantly.</div>
+      </div>
+      <div class="card hl-red">
+        <div class="ct">Tiny inserts = disaster</div>
+        <div class="cb">1 row per insert = 1 part. Above ~300 parts per partition ClickHouse refuses new inserts with <em>"too many parts."</em></div>
+      </div>
+    </div>
+    <div class="code"><span class="cm">-- Good: one large batch</span>
+<span class="kw">INSERT INTO</span> events <span class="kw">SELECT</span> * <span class="kw">FROM</span> staging;
+
+<span class="cm">-- Bad: loop inserting one row at a time</span></div>
+    <div class="card" style="margin-top:10px">
+      <div class="ct">What's inside a part?</div>
+      <div class="cb">A folder with one <code>.bin</code> compressed file per column, a <code>primary.idx</code> sparse index (one entry per 8,192 rows), and <code>minmax</code> index files. ClickHouse reads only the columns your query needs — that's why it's fast.</div>
+    </div>
+  </div>
+
+  <!-- ── PARTS ── -->
+  <div class="section" id="parts">
+    <div class="sh"><span class="sh-num">02</span><h2>Parts &amp; merges</h2></div>
+    <div class="card hl-blue">
+      <div class="ct">The merge loop
+        <button class="try-btn" onclick="openPopup('pop-granule');uGran()">See index skipping</button>
+        <button class="try-btn" onclick="openPopup('pop-partition');uPart()">See partition pruning</button>
+      </div>
+      <div class="cb">Background workers merge small parts into large ones 24/7. The sparse index has one entry per 8,192 rows — queries skip entire blocks of data that can't match. Fewer parts = smaller index = faster scans.</div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct">Healthy</div>
+        <div class="cb"><span class="badge b-ok">&lt;100 / partition</span><br><br>Merge keeps up. Queries skip most parts via the index.</div>
+      </div>
+      <div class="card">
+        <div class="ct">Breaking point</div>
+        <div class="cb"><span class="badge b-warn">100–300</span> queries slow<br><br><span class="badge b-danger" style="margin-top:6px;display:inline-flex">&gt;300</span> inserts fail</div>
+      </div>
+    </div>
+    <div class="code"><span class="kw">SELECT</span> partition, <span class="fn">count</span>() parts, <span class="fn">formatReadableSize</span>(<span class="fn">sum</span>(bytes_on_disk)) size
+<span class="kw">FROM</span>   system.parts
+<span class="kw">WHERE</span>  table = <span class="str">'your_table'</span> <span class="kw">AND</span> active = <span class="num">1</span>
+<span class="kw">GROUP  BY</span> partition <span class="kw">ORDER BY</span> parts <span class="kw">DESC</span>;</div>
+  </div>
+
+  <!-- ── MUTATIONS ── -->
+  <div class="section" id="mutations">
+    <div class="sh"><span class="sh-num">03</span><h2>Mutations</h2></div>
+    <div class="card hl-amber">
+      <div class="ct">ALTER UPDATE / DELETE = full rewrite</div>
+      <div class="cb">Parts are immutable. So <code>ALTER TABLE … UPDATE</code> schedules a background job that reads every affected part, decompresses it, applies your change, re-sorts, re-compresses, and writes new files. On 500 GB this takes <strong>hours</strong>. New inserts during the mutation create new parts that also need rewriting.</div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="ct">Side effects</div>
+        <div class="cb">Old + new parts coexist until cleanup. Disk usage temporarily doubles. CPU spikes during the rewrite.</div>
+      </div>
+      <div class="card hl-green">
+        <div class="ct">The right fix
+          <button class="try-btn" onclick="openPopup('pop-replacing');rReset()">See deduplication</button>
+        </div>
+        <div class="cb">Use <code>ReplacingMergeTree</code> for upserts — the engine deduplicates at merge time, no painful rewrites needed.</div>
+      </div>
+    </div>
+    <div class="code"><span class="kw">SELECT</span> table, parts_to_do, parts_done, latest_fail_reason
+<span class="kw">FROM</span>   system.mutations <span class="kw">WHERE</span> is_done = <span class="num">0</span>;</div>
+  </div>
+
+  <!-- ── ENGINES ── -->
+  <div class="section" id="engines">
+    <div class="sh"><span class="sh-num">04</span><h2>Engine families</h2></div>
+    <p style="font-size:13px;color:var(--t2);margin-bottom:16px;line-height:1.7">Four families cover 99% of real use cases. Pick by what your data looks like and how you query it.</p>
+    <div class="eng e-blue">
+      <div class="ehead"><span class="ename">MergeTree</span><span class="badge b-info">Default choice</span></div>
+      <div class="esub">Append-only analytics — events, logs, metrics</div>
+      <div class="edesc">Base engine. Data sorted by primary key, immutable parts, background merges. No deduplication.</div>
+      <div class="euse"><span class="euse-label">Use when</span><span>Inserting events that never change — clickstream, logs, sensor data, financial ticks.</span></div>
+      <div class="evars">
+        <div class="vr"><span class="vn">ReplacingMergeTree</span><span class="vd">Deduplicates on primary key at merge time. Use for upserts instead of mutations. Add <code>FINAL</code> to queries to force dedup at read time.</span></div>
+        <div class="vr"><span class="vn">SummingMergeTree</span><span class="vd">Auto-sums numeric columns for duplicate keys on merge. Great for counters.</span></div>
+        <div class="vr"><span class="vn">AggregatingMergeTree</span><span class="vd">Stores partial aggregation states. Used with Materialized Views for real-time aggregates.</span></div>
+        <div class="vr"><span class="vn">CollapsingMergeTree</span><span class="vd">Sign column (+1/−1) cancels old row versions on merge. Mutable state without mutations.</span></div>
+      </div>
+    </div>
+    <div class="eng e-purple">
+      <div class="ehead"><span class="ename">Integration engines</span><span class="badge b-dim">External data</span></div>
+      <div class="esub">Query external systems directly — no ETL</div>
+      <div class="euse"><span class="euse-label">Use when</span><span>Ingesting from Kafka in real time, or querying files in S3 without loading them first.</span></div>
+      <div class="evars">
+        <div class="vr"><span class="vn">Kafka</span><span class="vd">Consume a topic. Pair with a Materialized View → MergeTree to store durably.</span></div>
+        <div class="vr"><span class="vn">S3 / S3Queue</span><span class="vd">Query Parquet/CSV/JSON in S3 directly. S3Queue auto-ingests new files.</span></div>
+        <div class="vr"><span class="vn">MySQL / PostgreSQL</span><span class="vd">Read/write pass-through to external databases.</span></div>
+      </div>
+    </div>
+    <div class="eng e-green">
+      <div class="ehead"><span class="ename">Buffer</span><span class="badge b-dim">Utility</span></div>
+      <div class="esub">Absorbs insert storms before they hit MergeTree</div>
+      <div class="euse"><span class="euse-label">Use when</span><span>High-frequency small inserts are causing a parts explosion and you can't batch on the client.</span></div>
+    </div>
+    <div class="eng e-dim">
+      <div class="ehead"><span class="ename">Distributed</span><span class="badge b-dim">Cluster</span><span class="badge b-dim" style="margin-left:4px;cursor:pointer" onclick="openPopup('pop-replication');rSimReset()">See replication →</span></div>
+      <div class="esub">Fan queries across shards, merge results</div>
+      <div class="euse"><span class="euse-label">Use when</span><span>You have a multi-shard cluster. Distributed is what your app queries; MergeTree lives on each shard.</span></div>
+    </div>
+  </div>
+
+  <!-- ── DEEP DIVE ── -->
+  <div class="section" id="deepdive">
+    <div class="sh"><span class="sh-num">05</span><h2>Deep dive</h2></div>
+    <div class="dd-grid">
+      <div class="dd-card">
+        <div class="dd-label" style="color:var(--blue)">Primary key index</div>
+        <div class="dd-val" style="color:var(--blue)">Sparse</div>
+        <div class="dd-desc">One entry per 8,192 rows. Marks the min value of the first key column per block. Skips entire blocks, not individual rows. <button class="try-btn" onclick="openPopup('pop-granule');uGran()" style="display:inline-flex;margin-left:0;margin-top:6px">Try it</button></div>
+      </div>
+      <div class="dd-card">
+        <div class="dd-label" style="color:var(--amber)">Granule size</div>
+        <div class="dd-val" style="color:var(--amber)">8,192 rows</div>
+        <div class="dd-desc">Smallest unit ClickHouse reads. Even a 1-row query decompresses a full granule. Tune with <code>index_granularity</code>.</div>
+      </div>
+      <div class="dd-card">
+        <div class="dd-label" style="color:var(--green)">Compression</div>
+        <div class="dd-val" style="color:var(--green)">LZ4 default</div>
+        <div class="dd-desc">Each column compressed independently. Similar values sit together = much better ratios than row stores. Switch to <code>ZSTD</code> for higher compression at CPU cost.</div>
+      </div>
+      <div class="dd-card">
+        <div class="dd-label" style="color:var(--purple)">Replication</div>
+        <div class="dd-val" style="color:var(--purple)">ZooKeeper</div>
+        <div class="dd-desc">Add <code>Replicated</code> prefix to any MergeTree. Replicas coordinate via ZooKeeper. Each merges independently. <button class="try-btn" onclick="openPopup('pop-replication');rSimReset()" style="display:inline-flex;margin-left:0;margin-top:6px">Try it</button></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:10px">
+      <div class="ct" style="margin-bottom:12px">PRIMARY KEY vs ORDER BY vs PARTITION BY
+        <button class="try-btn" onclick="openPopup('pop-orderby');uOB()">See scan impact</button>
+      </div>
+      <div class="rule-row">
+        <div class="rule-icon ri-tip">O</div>
+        <div class="rule-body"><strong>ORDER BY</strong> — how rows are physically sorted within each part. The most important setting. Match it to your most common WHERE / GROUP BY columns.</div>
+      </div>
+      <div class="rule-row">
+        <div class="rule-icon ri-tip">P</div>
+        <div class="rule-body"><strong>PRIMARY KEY</strong> — columns used to build the sparse index. Defaults to ORDER BY. Controls which granules get skipped.</div>
+      </div>
+      <div class="rule-row" style="border-bottom:none">
+        <div class="rule-icon ri-tip">P</div>
+        <div class="rule-body"><strong>PARTITION BY</strong> — splits data into separate directories by value (e.g. month). Entire partitions can be skipped. Don't over-partition — too many partitions = too many parts. <button class="try-btn" onclick="openPopup('pop-partition');uPart()">See pruning</button></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct" style="margin-bottom:12px">Production rules</div>
+      <div class="rule-row"><div class="rule-icon ri-ok">✓</div><div class="rule-body"><strong>Put time first in ORDER BY.</strong> Most analytical queries filter by date range. <code>ORDER BY (date, user_id)</code> not <code>(user_id, date)</code>.</div></div>
+      <div class="rule-row"><div class="rule-icon ri-bad">✗</div><div class="rule-body"><strong>Don't partition by high-cardinality columns.</strong> <code>PARTITION BY user_id</code> creates millions of tiny partitions. Use <code>toYYYYMM(date)</code>.</div></div>
+      <div class="rule-row"><div class="rule-icon ri-ok">✓</div><div class="rule-body"><strong>Batch inserts.</strong> At least 100k–1M rows per call. Use a queue, Buffer engine, or client-side batching.</div></div>
+      <div class="rule-row"><div class="rule-icon ri-bad">✗</div><div class="rule-body"><strong>Avoid SELECT *.</strong> ClickHouse reads only requested columns — <code>SELECT *</code> destroys the columnar advantage.</div></div>
+      <div class="rule-row" style="border-bottom:none"><div class="rule-icon ri-bad">✗</div><div class="rule-body"><strong>Don't JOIN large right-side tables.</strong> ClickHouse loads the right side into memory. Use Dictionaries or denormalize instead.</div></div>
+    </div>
+  </div>
+
+  <!-- ── DETECT ── -->
+  <div class="section" id="detect">
+    <div class="sh"><span class="sh-num">06</span><h2>Detecting problems</h2></div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <table class="dtbl">
+        <thead><tr><th>System table</th><th>What it shows</th><th>Alarm at</th></tr></thead>
+        <tbody>
+          <tr><td>system.parts</td><td>Parts per table/partition, size, state</td><td><span class="badge b-warn">&gt;100/partition</span></td></tr>
+          <tr><td>system.mutations</td><td>Running mutations, <code>parts_to_do</code>, fail reason</td><td><span class="badge b-danger">stuck &gt;1h</span></td></tr>
+          <tr><td>system.merges</td><td>Active background merge queue depth</td><td><span class="badge b-warn">queue &gt;50</span></td></tr>
+          <tr><td>system.query_log</td><td>All queries — duration, memory, exceptions</td><td><span class="badge b-warn">ExceptionWhileProcessing</span></td></tr>
+          <tr><td>system.replication_queue</td><td>Replication lag, retries, failures</td><td><span class="badge b-danger">num_tries &gt;10</span></td></tr>
+          <tr><td>system.disks</td><td>Free space per storage volume</td><td><span class="badge b-danger">free &lt;20%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="code" style="margin-top:12px"><span class="cm">-- Health snapshot in one query</span>
+<span class="kw">SELECT</span> <span class="str">'parts'</span>    w, database||<span class="str">'.'</span>||table t, <span class="fn">count</span>() n
+<span class="kw">FROM</span>   system.parts <span class="kw">WHERE</span> active=<span class="num">1</span> <span class="kw">GROUP BY</span> database,table <span class="kw">HAVING</span> n><span class="num">200</span>
+<span class="kw">UNION ALL</span>
+<span class="kw">SELECT</span> <span class="str">'mutation'</span>, table, parts_to_do <span class="kw">FROM</span> system.mutations <span class="kw">WHERE</span> is_done=<span class="num">0</span>
+<span class="kw">UNION ALL</span>
+<span class="kw">SELECT</span> <span class="str">'merges'</span>,   type, <span class="fn">count</span>() <span class="kw">FROM</span> system.merges <span class="kw">GROUP BY</span> type;</div>
+  </div>
+
+</div>
+
+<footer>ClickHouse Internals · Built with Claude · 2026</footer>
+
+<script>
+/* ── POPUP ── */
+function openPopup(id){document.getElementById(id).classList.add('open')}
+function closePopupById(id){document.getElementById(id).classList.remove('open')}
+function closePopup(e,id){if(e.target===document.getElementById(id))closePopupById(id)}
+
+/* ── MAIN SIM ── */
+const MAX=300;
+let parts=[],merges=0,seq=0,mode=null;
+let iT=null,mT=null,mutT=null,mutOn=false,mutTotal=0,mutDone=0;
+function lg(msg,cls){
+  const el=document.getElementById('log');
+  const d=document.createElement('div');if(cls)d.className=cls;
+  d.textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'  '+msg;
+  el.appendChild(d);el.scrollTop=el.scrollHeight;
+  while(el.children.length>80)el.removeChild(el.firstChild);
+}
+function addPart(rows){
+  seq++;const n=`${String(seq).padStart(3,'0')}_${Date.now().toString(36).slice(-4)}`;
+  parts.unshift({n,rows,s:'new',id:seq});ui();lg(`+ INSERT → ${n} (${rows.toLocaleString()} rows)`,'lok');
+}
+function tryMerge(){
+  const f=parts.filter(p=>p.s==='new');
+  if(f.length>=4){
+    const c=f.slice(-4),tot=c.reduce((a,p)=>a+p.rows,0);
+    c.forEach(p=>p.s='dead');parts=parts.filter(p=>p.s!=='dead');
+    seq++;const mn=`merged_${String(seq).padStart(3,'0')}`;
+    parts.push({n:mn,rows:tot,s:'merged',id:seq});merges++;ui();
+    lg(`~ MERGE → ${mn} (4→1, ${tot.toLocaleString()} rows)`);
+  }
+}
+function ui(){
+  const area=document.getElementById('parts-area');area.innerHTML='';
+  parts.slice(0,58).forEach(p=>{
+    const el=document.createElement('div');
+    el.className='chip '+(p.s==='new'?'cn':p.s==='mutating'?'cmt':'cm2');
+    el.textContent=p.n;el.title=p.rows.toLocaleString()+' rows';area.appendChild(el);
+  });
+  if(parts.length>58){const m=document.createElement('div');m.className='chip cm2';m.textContent=`+${parts.length-58} more`;area.appendChild(m);}
+  const c=parts.length;
+  document.getElementById('st-parts').textContent=c;
+  document.getElementById('st-merges').textContent=merges;
+  const pct=Math.min(100,Math.round(c/MAX*100));
+  const f=document.getElementById('meter');
+  f.style.width=pct+'%';f.style.background=pct<40?'var(--green)':pct<75?'var(--amber)':'var(--red)';
+  document.getElementById('mlbl').textContent=c+'/'+MAX;
+  const b=document.getElementById('hbadge'),sn=document.getElementById('st-parts');
+  if(c<100){b.className='badge b-ok';b.textContent='Healthy';sn.style.color='var(--green)';}
+  else if(c<250){b.className='badge b-warn';b.textContent='Watch out';sn.style.color='var(--amber)';}
+  else{b.className='badge b-danger';b.textContent='Critical';sn.style.color='var(--red)';
+    if(c>=MAX)lg('✗ TOO MANY PARTS — inserts rejected!','lerr');}
+}
+function setMode(m){
+  if(iT)clearInterval(iT);if(mT)clearInterval(mT);mode=m;
+  ['btn-normal','btn-storm'].forEach(id=>document.getElementById(id).className='');
+  if(m==='normal'){
+    lg('— Normal mode: large batches every 1.5s');
+    iT=setInterval(()=>{if(parts.length<MAX)addPart(Math.round(50000+Math.random()*200000));},1500);
+    mT=setInterval(tryMerge,3000);document.getElementById('btn-normal').className='go';
+  }else{
+    lg('⚡ Storm mode: tiny inserts every 200ms','lwarn');
+    iT=setInterval(()=>{if(parts.length<MAX)addPart(Math.round(5+Math.random()*40));},200);
+    mT=setInterval(tryMerge,6000);document.getElementById('btn-storm').className='storm';
+  }
+}
+function triggerMutation(){
+  if(mutOn){lg('Mutation already running','lwarn');return;}
+  if(!parts.length){lg('No parts yet — start inserts first','lwarn');return;}
+  mutOn=true;mutDone=0;mutTotal=parts.length;const snap=[...parts];
+  document.getElementById('mut-panel').style.display='block';
+  document.getElementById('st-mut').textContent='0%';document.getElementById('st-mut').style.color='var(--amber)';
+  lg(`>> MUTATION started — rewriting ${mutTotal} parts`,'lwarn');
+  let i=0;
+  mutT=setInterval(()=>{
+    if(i>=snap.length){
+      clearInterval(mutT);mutOn=false;lg('<< MUTATION complete','lok');
+      document.getElementById('st-mut').textContent='Done';document.getElementById('st-mut').style.color='var(--green)';
+      parts.forEach(p=>{if(p.s==='mutating')p.s='merged';});ui();return;
+    }
+    const live=parts.find(p=>p.id===snap[i].id);if(live)live.s='mutating';
+    mutDone++;const extra=parts.length-mutTotal;
+    document.getElementById('mut-fill').style.width=Math.round(mutDone/mutTotal*100)+'%';
+    document.getElementById('mut-lbl').textContent=mutDone+'/'+mutTotal;
+    document.getElementById('st-mut').textContent=Math.round(mutDone/mutTotal*100)+'%';
+    if(extra>0){document.getElementById('mut-note').textContent=`${extra} new part(s) added — queue keeps growing.`;document.getElementById('mut-note').style.color='var(--amber)';}
+    ui();i++;
+  },340);
+}
+function resetAll(){
+  if(iT)clearInterval(iT);if(mT)clearInterval(mT);if(mutT)clearInterval(mutT);
+  parts=[];merges=0;seq=0;mutOn=false;mode=null;
+  document.getElementById('mut-panel').style.display='none';
+  document.getElementById('st-mut').textContent='—';document.getElementById('st-mut').style.color='var(--t3)';
+  ['btn-normal','btn-storm'].forEach(id=>document.getElementById(id).className='');
+  document.getElementById('log').innerHTML='';ui();lg('Simulation reset.');
+}
+ui();lg('Ready — press Normal inserts or Insert storm to begin.');
+
+/* ── DEMO: GRANULE ── */
+const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const GR=[142,98,165,180,155,90,210,188,144,130,105,176];
+function uGran(){
+  let s=+document.getElementById('gs').value,e=+document.getElementById('ge').value;
+  if(e<s){e=s;document.getElementById('ge').value=s;}
+  document.getElementById('gs-lbl').textContent=MN[s];
+  document.getElementById('ge-lbl').textContent=MN[e];
+  const grid=document.getElementById('ggrid');grid.innerHTML='';
+  let rK=0,sK=0;
+  MN.forEach((m,i)=>{
+    const in_=(i>=s&&i<=e),hit=(i===s||i===e);
+    const el=document.createElement('div');
+    el.className='gran '+(in_?(hit?'g-hit':'g-read'):'g-skip');
+    el.textContent=m;grid.appendChild(el);
+    if(in_)rK+=GR[i];else sK+=GR[i];
+  });
+  const tot=GR.reduce((a,b)=>a+b,0),pct=Math.round(rK/tot*100);
+  document.getElementById('gran-out').innerHTML=
+    `Granules scanned:  <span class="ac">${e-s+1} / 12</span>  (${rK}K rows)\n`+
+    `Granules skipped:  <span class="sk">${12-(e-s+1)} / 12</span>  (${sK}K rows — never read)\n\n`+
+    (pct<=20?`<span class="hi">Only ${pct}% of table read — excellent.</span>`:`<span class="${pct<60?'ac':'wn'}">${pct}% of table read.</span>`);
+}
+uGran();
+
+/* ── DEMO: PARTITION ── */
+const PR=[12,9,15,14,18,11,20,17,13,10,8,16];
+function uPart(){
+  const s=+document.getElementById('ps').value,e=+document.getElementById('pe').value;
+  const map=document.getElementById('pmap');map.innerHTML='';
+  let rM=0,sM=0;
+  MN.forEach((m,i)=>{
+    const on=(i>=s&&i<=e);
+    const el=document.createElement('div');el.className='pcell '+(on?'pc-on':'pc-off');
+    el.innerHTML=`<div class="pcm">${m}</div><div class="pcr">${PR[i]}M</div>`;
+    map.appendChild(el);if(on)rM+=PR[i];else sM+=PR[i];
+  });
+  const tot=PR.reduce((a,b)=>a+b,0),pct=Math.round(rM/tot*100);
+  document.getElementById('part-out').innerHTML=
+    `Partitions scanned:  <span class="ac">${e-s+1} months</span>  (${rM}M rows)\n`+
+    `Partitions skipped:  <span class="sk">${12-(e-s+1)} months</span>  (${sM}M rows — <span class="hi">files never opened</span>)\n\n`+
+    (pct<=25?`<span class="hi">Great — ${pct}% of data read.</span>`:`<span class="wn">${pct}% of data read. Try a narrower range.</span>`);
+}
+uPart();
+
+/* ── DEMO: REPLACING ── */
+let rRows=[],rSeq=1;
+function rInsert(user){
+  const score=Math.floor(Math.random()*500)+100;
+  const ver=Date.now();const part=`part_${String(rSeq++).padStart(2,'0')}`;
+  rRows.push({user,score,ver,part});renderR();
+}
+function rMerge(){
+  const best={};
+  rRows.forEach(r=>{if(!best[r.user]||r.ver>best[r.user].ver)best[r.user]=r;});
+  rRows=Object.values(best).map(r=>({...r,part:'merged'}));renderR();
+  document.getElementById('r-out').innerHTML='<span class="hi">Merge done.</span> Only the latest row per user kept.';
+}
+function rReset(){rRows=[];rSeq=1;renderR();document.getElementById('r-out').textContent='Insert some rows, then run merge.';}
+function renderR(){
+  const raw=document.getElementById('r-raw'),mrg=document.getElementById('r-merged');
+  raw.innerHTML='';mrg.innerHTML='';
+  const best={};rRows.forEach(r=>{if(!best[r.user]||r.ver>best[r.user].ver)best[r.user]=r;});
+  if(!rRows.length){
+    raw.innerHTML='<tr><td colspan="3" style="color:var(--t3);padding:10px 8px;text-align:center">No rows yet</td></tr>';
+    mrg.innerHTML='<tr><td colspan="3" style="color:var(--t3);padding:10px 8px;text-align:center">Run merge first</td></tr>';
+    return;
+  }
+  rRows.forEach(r=>{
+    const latest=best[r.user]&&best[r.user].ver===r.ver;
+    const tr=document.createElement('tr');
+    tr.className=r.part==='merged'?'r-kept':(latest?'r-new':'r-dup');
+    tr.innerHTML=`<td>${r.user}</td><td>${r.score}</td><td style="font-size:9.5px">${String(r.ver).slice(-3)}</td>`;
+    raw.appendChild(tr);
+  });
+  const deds=Object.values(best).sort((a,b)=>a.user.localeCompare(b.user));
+  deds.forEach(r=>{
+    const tr=document.createElement('tr');tr.className='r-kept';
+    tr.innerHTML=`<td>${r.user}</td><td>${r.score}</td><td style="font-size:9.5px">${String(r.ver).slice(-3)}</td>`;
+    mrg.appendChild(tr);
+  });
+  const dups=rRows.length-Object.keys(best).length;
+  if(dups>0)document.getElementById('r-out').innerHTML=`<span class="wn">${dups} duplicate(s) exist.</span> Query without FINAL returns all rows. Add <span class="hi">FINAL</span> to deduplicate at read time.`;
+  else if(rRows.length>0&&dups===0)document.getElementById('r-out').innerHTML=`<span class="hi">No duplicates yet.</span> Insert the same user again to create one.`;
+}
+renderR();
+
+/* ── DEMO: ORDER BY ── */
+const OBC={
+  date:{rows:[{n:'ORDER BY (date, …)',g:3,t:122000,c:'var(--green)'},{n:'ORDER BY (user_id, …)',g:122000,t:122000,c:'var(--red)'},{n:'ORDER BY (event_type, …)',g:122000,t:122000,c:'var(--red)'}],note:'<span class="hi">date is the leading column</span> — index finds the right blocks immediately. Only 3 granules read out of 122,000.'},
+  user:{rows:[{n:'ORDER BY (date, …)',g:122000,t:122000,c:'var(--red)'},{n:'ORDER BY (user_id, …)',g:1,t:122000,c:'var(--green)'},{n:'ORDER BY (event_type, …)',g:122000,t:122000,c:'var(--red)'}],note:'<span class="wn">user_id alone — full scan</span> unless date is also in the filter. ORDER BY must start with what you filter on.'},
+  both:{rows:[{n:'ORDER BY (date, …)',g:2,t:122000,c:'var(--green)'},{n:'ORDER BY (user_id, …)',g:60000,t:122000,c:'var(--amber)'},{n:'ORDER BY (event_type, …)',g:122000,t:122000,c:'var(--red)'}],note:'<span class="hi">date + user_id matches the first two ORDER BY columns</span> — best result. 2 granules read.'},
+  event:{rows:[{n:'ORDER BY (date, …)',g:122000,t:122000,c:'var(--red)'},{n:'ORDER BY (user_id, …)',g:122000,t:122000,c:'var(--red)'},{n:'ORDER BY (event_type, …)',g:6000,t:122000,c:'var(--amber)'}],note:'<span class="wn">event_type has low cardinality</span> — even as leading column the index isn\'t very selective. ~6,000 granules read.'}
+};
+function uOB(){
+  const q=document.getElementById('ob').value;const cfg=OBC[q];
+  const c=document.getElementById('ob-bars');c.innerHTML='';
+  cfg.rows.forEach(b=>{
+    const pct=Math.max(1,Math.round(b.g/b.t*100));
+    const lbl=b.g>=b.t?'full scan':b.g.toLocaleString()+' gran';
+    const d=document.createElement('div');d.className='obbar';
+    d.innerHTML=`<div class="obbar-lbl"><span>${b.n}</span><span style="font-family:'Fira Code',monospace">${lbl}</span></div><div class="obbar-track"><div class="obbar-fill" style="width:${pct}%;background:${b.c}"><span>${pct<8?'':pct+'%'}</span></div></div>`;
+    c.appendChild(d);
+  });
+  document.getElementById('ob-out').innerHTML=cfg.note;
+}
+uOB();
+
+/* ── DEMO: REPLICATION ── */
+const LAGS=[0,50,200,800,3000];
+let rsState=[{name:'Replica 1',parts:0,role:'primary',s:'ok'},{name:'Replica 2',parts:0,role:'replica',s:'ok'},{name:'Replica 3',parts:0,role:'replica',s:'ok'}];
+function renderRS(){
+  const c=document.getElementById('rnodes');c.innerHTML='';
+  rsState.forEach(n=>{
+    const el=document.createElement('div');el.className='rnode '+n.s;
+    el.innerHTML=`<div class="rnode-name">${n.name}${n.role==='primary'?' <span style="font-size:9px;color:var(--blue)">[primary]</span>':''}</div><div class="rnode-count">${n.parts}</div><div class="rnode-status">${n.s==='syncing'?'syncing…':n.s==='lag'?'behind':'in sync'}</div>`;
+    c.appendChild(el);
+  });
+}
+function rSimInsert(){
+  const lag=LAGS[+document.getElementById('rl').value];
+  rsState[0].parts+=4;rsState[0].s='ok';
+  rsState.slice(1).forEach(r=>r.s=lag===0?'ok':lag>500?'lag':'syncing');
+  renderRS();
+  document.getElementById('rsim-out').innerHTML=`<span class="hi">Insert landed on Replica 1</span> — registered in ZooKeeper.\nOther replicas${lag===0?' synced instantly':` fetching with ${LAGS[+document.getElementById('rl').value]}ms lag`}.`;
+  if(lag>0){
+    setTimeout(()=>{rsState[1].parts=rsState[0].parts;rsState[1].s='ok';renderRS();},Math.min(lag,1500));
+    setTimeout(()=>{
+      rsState[2].parts=rsState[0].parts;rsState[2].s='ok';renderRS();
+      document.getElementById('rsim-out').innerHTML=lag>500
+        ?`<span class="wn">High lag — replicas 2 & 3 served stale data for ${lag}ms.</span>\nAll replicas now in sync at <span class="hi">${rsState[0].parts} parts</span>.`
+        :`All replicas in sync at <span class="hi">${rsState[0].parts} parts</span>.`;
+    },Math.min(lag*1.8,3000));
+  }
+}
+function rSimReset(){rsState.forEach(r=>{r.parts=0;r.s='ok';});renderRS();document.getElementById('rsim-out').textContent='Press "Insert batch" to start.';}
+renderRS();
+
+/* ── NAV HIGHLIGHT ── */
+document.querySelectorAll('.section').forEach(s=>{
+  new IntersectionObserver(e=>{
+    if(e[0].isIntersecting){
+      document.querySelectorAll('nav a').forEach(a=>a.classList.remove('on'));
+      const a=document.querySelector(`nav a[href="#${s.id}"]`);if(a)a.classList.add('on');
+    }
+  },{threshold:0.25}).observe(s);
+});
+</script>
+</body>
+</html>
