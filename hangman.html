@@ -43,11 +43,15 @@
   .topbar{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 12px;}
   .brand{display:flex;align-items:center;gap:9px;}
   .logo{
-    width:34px;height:34px;border-radius:9px;background:var(--honey);
+    width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(145deg,var(--honey),#d99a2b);
     display:flex;align-items:center;justify-content:center;
     font-family:var(--disp);font-weight:900;font-size:22px;color:#211a10;
-    box-shadow:0 4px 14px -4px rgba(242,180,65,.6);
+    box-shadow:0 4px 14px -4px rgba(242,180,65,.6), inset 0 1px 0 rgba(255,255,255,.4);
+    position:relative;overflow:hidden;
   }
+  .logo::after{content:"";position:absolute;inset:0;
+    background:linear-gradient(160deg,rgba(255,255,255,.35),transparent 45%);pointer-events:none;}
   .brand .name{font-family:var(--disp);font-weight:800;font-size:19px;letter-spacing:-.01em;line-height:1;}
   .brand .name small{display:block;font-family:var(--body);font-weight:400;font-size:11px;color:var(--muted);letter-spacing:.02em;margin-top:2px;}
   .streak{
@@ -69,12 +73,18 @@
     background:linear-gradient(180deg,var(--surface),var(--bg));
     border:1px solid var(--line);border-radius:18px;
     padding:12px;display:flex;flex-direction:column;align-items:center;gap:8px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 18px 40px -30px rgba(0,0,0,.8);
+  }
+  .gallows-wrap.shake{animation:shake .4s ease;}
+  @keyframes shake{
+    10%,90%{transform:translateX(-1px);}20%,80%{transform:translateX(2px);}
+    30%,50%,70%{transform:translateX(-4px);}40%,60%{transform:translateX(4px);}
   }
   svg.gallows{height:clamp(120px,19vh,168px);width:auto;display:block;}
   .gallows line, .gallows path, .gallows circle{stroke-linecap:round;}
   .beam{stroke:var(--muted);}
-  .figure *{stroke:var(--text);opacity:0;transition:opacity .45s ease;}
-  .figure .on{opacity:1;}
+  .figure > g{opacity:0;transition:opacity .45s ease;}
+  .figure > g.on{opacity:1;}
   .lives{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
   .lives b{color:var(--text);font-family:var(--disp);font-weight:700;}
   .lives .hearts{display:flex;gap:4px;direction:ltr;}
@@ -121,7 +131,16 @@
     height:clamp(42px,6.2vh,50px);cursor:pointer;touch-action:manipulation;
     box-shadow:0 2px 0 rgba(0,0,0,.25);
     transition:transform .07s,background .2s,color .2s,box-shadow .1s,opacity .3s;
+    animation:keyIn .45s cubic-bezier(.2,.8,.3,1) backwards;
   }
+  @keyframes keyIn{from{opacity:0;transform:translateY(9px) scale(.95);}to{opacity:1;transform:none;}}
+  .keyboard .key:nth-child(6n+1){animation-delay:.20s}
+  .keyboard .key:nth-child(6n+2){animation-delay:.23s}
+  .keyboard .key:nth-child(6n+3){animation-delay:.26s}
+  .keyboard .key:nth-child(6n+4){animation-delay:.29s}
+  .keyboard .key:nth-child(6n+5){animation-delay:.32s}
+  .keyboard .key:nth-child(6n){animation-delay:.35s}
+  @media (hover:hover){.key:hover{background:#39314f;}}
   .key:active{transform:translateY(2px);box-shadow:none;}
   .key:focus-visible{outline:2px solid var(--honey);outline-offset:2px;}
   .key.hit{background:var(--mint);color:#0d2a20;box-shadow:0 2px 0 #2f7a5e;pointer-events:none;}
@@ -140,16 +159,29 @@
     transform:translateY(22px);transition:transform .7s cubic-bezier(.2,.7,.2,1);}
   .reveal.on .reveal-inner{transform:none;}
   .reveal .kicker{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.14em;
-    color:var(--honey);text-transform:uppercase;direction:ltr;}
-  .big-message{font-family:var(--disp);font-weight:900;line-height:.98;
+    color:var(--honey);text-transform:uppercase;direction:ltr;
+    opacity:0;}
+  .reveal.on .kicker{animation:riseIn .6s ease .15s both;}
+  .big-message{font-family:var(--disp);font-weight:900;line-height:.98;position:relative;
     font-size:clamp(46px,17vw,80px);
     background:linear-gradient(180deg,#fff,var(--honey));
     -webkit-background-clip:text;background-clip:text;color:transparent;}
+  .reveal.on .big-message{animation:riseIn .7s cubic-bezier(.2,.8,.3,1) .28s backwards;}
+  .big-message::before{content:"";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:120%;height:150%;z-index:-1;
+    background:radial-gradient(closest-side,rgba(242,180,65,.22),transparent 70%);
+    filter:blur(10px);opacity:0;}
+  .reveal.on .big-message::before{animation:glowIn 1s ease .5s forwards;}
+  @keyframes glowIn{to{opacity:1;}}
+  @keyframes riseIn{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
   .photo-frame{width:100%;border-radius:20px;overflow:hidden;position:relative;
     border:1px solid var(--line-strong);
     box-shadow:0 30px 60px -30px rgba(0,0,0,.9), 0 0 0 5px rgba(242,180,65,.08);}
+  .reveal.on .photo-frame{animation:photoIn .8s cubic-bezier(.2,.8,.3,1) .42s backwards;}
+  @keyframes photoIn{from{opacity:0;transform:scale(.94) translateY(12px);}to{opacity:1;transform:none;}}
   .photo-frame img{display:block;width:100%;height:auto;}
   .sub-message{font-size:16.5px;line-height:1.75;color:var(--muted);max-width:32ch;}
+  .reveal.on .sub-message{animation:riseIn .6s ease .62s backwards;}
   .sub-message b{color:var(--text);font-weight:700;}
   .replay{margin-top:2px;appearance:none;border:1px solid var(--line-strong);background:transparent;
     color:var(--muted);font-family:var(--disp);font-weight:600;font-size:13px;
@@ -187,14 +219,66 @@
         <line class="beam" x1="45" y1="55" x2="78" y2="23"/>
         <line class="beam" x1="127" y1="23" x2="127" y2="45"/>
       </g>
-      <!-- figure (revealed by misses) -->
-      <g class="figure" stroke-width="5" fill="none">
-        <circle id="p1" cx="127" cy="63" r="16"/>
-        <line   id="p2" x1="127" y1="79" x2="127" y2="135"/>
-        <line   id="p3" x1="127" y1="92" x2="104" y2="118"/>
-        <line   id="p4" x1="127" y1="92" x2="150" y2="118"/>
-        <line   id="p5" x1="127" y1="135" x2="107" y2="170"/>
-        <line   id="p6" x1="127" y1="135" x2="147" y2="170"/>
+      <!-- figure (revealed by misses) — stylized woman -->
+      <g class="figure">
+        <!-- p1: head + curly hair -->
+        <g id="p1">
+          <!-- curly hair mass -->
+          <g fill="#3a2c26">
+            <circle cx="127" cy="46" r="10"/><circle cx="116" cy="50" r="9"/>
+            <circle cx="138" cy="50" r="9"/><circle cx="110" cy="60" r="8"/>
+            <circle cx="144" cy="60" r="8"/><circle cx="112" cy="72" r="7"/>
+            <circle cx="142" cy="72" r="7"/><circle cx="115" cy="82" r="6"/>
+            <circle cx="139" cy="82" r="6"/>
+          </g>
+          <!-- face -->
+          <circle cx="127" cy="62" r="13" fill="#e8b58f"/>
+          <!-- front curls over forehead -->
+          <g fill="#3a2c26">
+            <circle cx="118" cy="53" r="5"/><circle cx="127" cy="50" r="5"/><circle cx="136" cy="53" r="5"/>
+          </g>
+          <!-- features -->
+          <circle cx="122" cy="62" r="1.7" fill="#2a2320"/>
+          <circle cx="132" cy="62" r="1.7" fill="#2a2320"/>
+          <path d="M122,67 q5,5 10,0" fill="none" stroke="#b5745a" stroke-width="1.8" stroke-linecap="round"/>
+          <!-- neck -->
+          <rect x="123.5" y="73" width="7" height="8" rx="3" fill="#e8b58f"/>
+        </g>
+
+        <!-- p2: black tee + belt -->
+        <g id="p2">
+          <!-- sleeves -->
+          <path d="M111,85 q-8,1 -8,10 q5,3 10,0 z" fill="#26262c" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+          <path d="M143,85 q8,1 8,10 q-5,3 -10,0 z" fill="#26262c" stroke="rgba(255,255,255,.4)" stroke-width="1"/>
+          <!-- torso -->
+          <path d="M112,82 q6,-4 15,-4 q9,0 15,4 l-1,32 q0,3 -5,3 l-18,0 q-5,0 -5,-3 z"
+                fill="#26262c" stroke="rgba(255,255,255,.45)" stroke-width="1.2"/>
+          <!-- belt -->
+          <rect x="109" y="113" width="36" height="6" rx="1.5" fill="#141416" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>
+          <rect x="123.5" y="113.5" width="7" height="5" rx="1" fill="#c9a24b"/>
+        </g>
+
+        <!-- p3: left arm -->
+        <g id="p3">
+          <path d="M112,89 q-9,10 -13,23" fill="none" stroke="#e8b58f" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="98" cy="114" r="4.2" fill="#e8b58f"/>
+        </g>
+        <!-- p4: right arm -->
+        <g id="p4">
+          <path d="M142,89 q9,10 13,23" fill="none" stroke="#e8b58f" stroke-width="7" stroke-linecap="round"/>
+          <circle cx="156" cy="114" r="4.2" fill="#e8b58f"/>
+        </g>
+
+        <!-- p5: left leg (jeans) -->
+        <g id="p5">
+          <path d="M122,119 q-3,24 -6,46" fill="none" stroke="#3f6ea8" stroke-width="11" stroke-linecap="round"/>
+          <ellipse cx="115" cy="168" rx="6" ry="3.5" fill="#2a2320"/>
+        </g>
+        <!-- p6: right leg (jeans) -->
+        <g id="p6">
+          <path d="M132,119 q3,24 6,46" fill="none" stroke="#3f6ea8" stroke-width="11" stroke-linecap="round"/>
+          <ellipse cx="139" cy="168" rx="6" ry="3.5" fill="#2a2320"/>
+        </g>
       </g>
     </svg>
     <div class="lives">
@@ -278,8 +362,15 @@
     keyboard.appendChild(b);keyEls[l]=b;
   });
 
+  let toastTimer=null;
   function say(msg,type){
     toast.textContent=msg;toast.className="toast show"+(type?" "+type:"");
+    clearTimeout(toastTimer);
+    toastTimer=setTimeout(()=>{if(!done)toast.className="toast"+(type?" "+type:"");},1800);
+  }
+  function shakeGallows(){
+    const w=document.querySelector(".gallows-wrap");
+    w.classList.remove("shake");void w.offsetWidth;w.classList.add("shake");
   }
   function updateLives(){
     livesNum.textContent=MAX_MISS-miss;
@@ -308,7 +399,7 @@
       if(isSolved()){done=true;setTimeout(win,n*80+300);}
     }else{
       key.classList.add("miss");
-      miss++;updateLives();
+      miss++;updateLives();shakeGallows();
       say(MAX_MISS-miss>0?`לא. נותרו ${MAX_MISS-miss} ניסיונות.`:"אוי…","bad");
       if(miss>=MAX_MISS){done=true;setTimeout(lose,600);}
     }
