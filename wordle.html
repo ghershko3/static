@@ -44,6 +44,7 @@
     min-height:100dvh;
     height:100dvh;
     height:100svh;
+    overflow:hidden;
   }
   header{
     display:flex; align-items:center; justify-content:center;
@@ -90,6 +91,7 @@
     display:flex; flex-direction:column; align-items:center; justify-content:center;
     width:100%; max-width:var(--maxw); margin:0 auto;
     padding:8px 8px 0;
+    padding-bottom:var(--kb-space, 220px);
   }
 
   #board{
@@ -164,23 +166,28 @@
   }
 
   #keyboard{
+    position:fixed;
+    left:0; right:0;
+    bottom:0;
+    z-index:40;
     width:100%;
     max-width:500px;
+    margin:0 auto;
     display:flex; flex-direction:column; gap:var(--kb-gap);
-    padding:0 6px calc(env(safe-area-inset-bottom, 0px) + 12px);
-    margin-top:auto;
+    padding:8px 8px max(10px, env(safe-area-inset-bottom, 0px));
+    background:linear-gradient(to top, var(--bg) 78%, rgba(255,255,255,0));
     user-select:none;
     flex-shrink:0;
+    touch-action:manipulation;
   }
   .kb-row{
     display:flex; flex-direction:row; direction:ltr;
-    gap:var(--kb-gap); justify-content:center;
+    gap:6px; justify-content:center;
     width:100%;
   }
   .key{
-    flex:1;
+    flex:1 1 0;
     min-width:0;
-    max-width:43px;
     height:58px;
     border-radius:var(--radius-key);
     border:none;
@@ -188,34 +195,42 @@
     color:var(--key-text);
     font-family:inherit;
     font-weight:700;
-    font-size:1.1rem;
+    font-size:1.05rem;
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     padding:0;
-    transition:background 0.12s ease, color 0.12s ease;
+    transition:background 0.12s ease, color 0.12s ease, transform 0.08s ease;
     -webkit-user-select:none;
     user-select:none;
+    box-shadow:0 1px 0 rgba(0,0,0,0.06);
   }
-  .key:active{ filter:brightness(0.92); }
+  .key:active{
+    filter:brightness(0.94);
+    transform:scale(0.97);
+  }
   .key.wide{
-    flex:1.55;
-    max-width:65px;
-    font-size:0.75rem;
+    flex:1.65 1 0;
+    font-size:0.72rem;
     font-weight:700;
     letter-spacing:0.01em;
+    padding:0 4px;
   }
-  .key.correct{ background:var(--correct); color:#fff; }
-  .key.present{ background:var(--present); color:#fff; }
-  .key.absent{ background:var(--absent); color:#fff; }
-  @media (max-width:380px){
-    .key{ height:52px; font-size:1rem; max-width:40px; }
-    .key.wide{ max-width:58px; font-size:0.7rem; }
-    #keyboard{ gap:5px; padding-left:4px; padding-right:4px; }
+  .key.correct{ background:var(--correct); color:#fff; box-shadow:none; }
+  .key.present{ background:var(--present); color:#fff; box-shadow:none; }
+  .key.absent{ background:var(--absent); color:#fff; box-shadow:none; }
+  @media (max-width:400px){
+    #keyboard{
+      max-width:none;
+      padding:6px 4px max(8px, env(safe-area-inset-bottom, 0px));
+      gap:5px;
+    }
     .kb-row{ gap:5px; }
+    .key{ height:54px; font-size:1rem; border-radius:5px; }
+    .key.wide{ font-size:0.68rem; flex:1.7 1 0; }
   }
-  @media (min-width:500px){
-    .key{ height:58px; max-width:46px; }
-    .key.wide{ max-width:68px; }
+  @media (min-width:501px){
+    #keyboard{ padding-left:10px; padding-right:10px; }
+    .key{ height:58px; }
   }
 
   #toast-wrap{
@@ -346,12 +361,12 @@
   .choice-btn.secondary:hover{ border-color:var(--text); }
 
   @media (max-height:700px){
-    .key{ height:52px; }
+    .key{ height:50px; }
     header h1{ font-size:24px; }
   }
   @media (max-height:620px){
-    .key{ height:46px; font-size:0.95rem; }
-    #keyboard{ gap:4px; }
+    .key{ height:44px; font-size:0.95rem; }
+    #keyboard{ gap:4px; padding-top:4px; }
     .kb-row{ gap:4px; }
   }
   @media (prefers-reduced-motion: reduce){
@@ -1014,25 +1029,35 @@
   buildBoard();
   buildKeyboard();
 
+  function pinKeyboardToViewport(){
+    const kb = document.getElementById('keyboard');
+    const vv = window.visualViewport;
+    if(!vv){
+      kb.style.bottom = '0px';
+      return;
+    }
+    const bottomGap = Math.max(0, window.innerHeight - (vv.offsetTop + vv.height));
+    kb.style.bottom = bottomGap + 'px';
+  }
+
   function sizeBoardToFit(){
+    pinKeyboardToViewport();
     const header = document.querySelector('header');
     const mainEl = document.querySelector('main');
     const kb = document.getElementById('keyboard');
     const boardEl = document.getElementById('board');
-    const mainStyle = getComputedStyle(mainEl);
-    const padTop = parseFloat(mainStyle.paddingTop) || 0;
-    const padBottom = parseFloat(mainStyle.paddingBottom) || 0;
-    const desiredGap = window.innerHeight <= 620 ? 10 : 18;
+    const desiredGap = window.innerHeight <= 620 ? 8 : 14;
     const vv = window.visualViewport;
     const viewportH = vv ? vv.height : window.innerHeight;
     const headerH = header.getBoundingClientRect().height;
     const kbH = kb.getBoundingClientRect().height;
-    const available = viewportH - headerH - padTop - padBottom - kbH - desiredGap;
+    document.documentElement.style.setProperty('--kb-space', (kbH + 8) + 'px');
+    const available = viewportH - headerH - kbH - desiredGap - 8;
 
     const gapPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 5;
     const rows = 6;
     const tileFromHeight = (available - gapPx * (rows - 1)) / rows;
-    const widthCap = Math.min(window.innerWidth - 24, 350);
+    const widthCap = Math.min((vv ? vv.width : window.innerWidth) - 24, 350);
     const tileFromWidth = (widthCap - gapPx * 4) / 5;
 
     const tile = Math.max(32, Math.min(62, tileFromHeight, tileFromWidth));
@@ -1041,9 +1066,10 @@
   }
 
   window.addEventListener('resize', sizeBoardToFit);
-  window.addEventListener('orientationchange', ()=> setTimeout(sizeBoardToFit, 50));
+  window.addEventListener('orientationchange', ()=> setTimeout(sizeBoardToFit, 80));
   if(window.visualViewport){
     window.visualViewport.addEventListener('resize', sizeBoardToFit);
+    window.visualViewport.addEventListener('scroll', pinKeyboardToViewport);
   }
   setTimeout(sizeBoardToFit, 0);
 
