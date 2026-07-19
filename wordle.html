@@ -623,7 +623,7 @@
     max-width:280px;
   }
 
-  .reveal-tickets{
+  .reveal-btn.primary{
     display:inline-flex;
     align-items:center;
     justify-content:center;
@@ -636,31 +636,26 @@
     font-weight:800;
     letter-spacing:0.06em;
     font-size:14px;
-    text-decoration:none;
+    cursor:pointer;
     transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
     box-shadow:0 8px 24px rgba(0,0,0,0.35);
   }
-  .reveal-tickets:hover{
-    background:var(--brass-soft);
-  }
-  .reveal-tickets:active{ transform:scale(0.98); }
+  .reveal-btn.primary:hover{ background:var(--brass-soft); }
+  .reveal-btn.primary:active{ transform:scale(0.98); }
 
-  .reveal-btn{
-    background:transparent;
-    color:rgba(228,205,143,0.85);
-    border:none;
-    border-bottom:1px solid rgba(200,162,76,0.35);
-    border-radius:0;
-    padding:6px 4px;
+  .reveal-tickets{
+    display:inline-block;
+    color:rgba(228,205,143,0.8);
     font-family:'Heebo', sans-serif;
     font-weight:500;
-    letter-spacing:0.02em;
-    font-size:13px;
-    cursor:pointer;
-    max-width:100%;
-    transition: color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
+    font-size:12px;
+    letter-spacing:0.04em;
+    text-decoration:none;
+    border-bottom:1px solid rgba(200,162,76,0.4);
+    padding-bottom:2px;
+    transition: color 0.2s ease, border-color 0.2s ease;
   }
-  .reveal-btn:hover{
+  .reveal-tickets:hover{
     color:var(--brass-soft);
     border-bottom-color:var(--brass);
   }
@@ -676,7 +671,7 @@
     .reveal-photo{ width:min(40vw, 150px); max-height:min(24vh, 150px); }
     .reveal-frame{ padding:3px; }
     .reveal-divider{ margin:6px 0 0; }
-    .reveal-tickets{ padding:12px 18px; font-size:13px; }
+    .reveal-btn.primary{ padding:12px 18px; font-size:13px; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -780,7 +775,7 @@
     <div class="reveal-divider"><span>◆</span></div>
     <div class="reveal-sub">הפעם מקווה שנצליח לראות יותר מ-78% מהמופע</div>
     <div class="reveal-actions">
-      <button class="reveal-btn" id="revealClose" type="button">איזה כיף!</button>
+      <button class="reveal-btn primary" id="revealClose" type="button">איזה כיף!</button>
       <a class="reveal-tickets" href="https://tickets.cameri.co.il/edocument/5e5a945f-2e2e-417c-a395-e0e4a0b43408/?id=291817141041720" target="_blank" rel="noopener noreferrer">לצפייה בכרטיסים</a>
     </div>
   </div>
