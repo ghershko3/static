@@ -6,184 +6,248 @@
 <title>וורדל</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700;800&family=Frank+Ruhl+Libre:wght@500;700;900&family=Fjalla+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=Fjalla+One&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#ffffff;
     --text:#1a1a1b;
+    --muted:#787c7e;
     --border:#d3d6da;
     --border-strong:#878a8c;
     --key-bg:#d3d6da;
     --key-text:#1a1a1b;
     --correct:#6aaa64;
     --present:#c9b458;
-    --absent:#787c7f;
-    --gap: 5px;
-    --maxw: 500px;
-    --tile-size: 58px;
+    --absent:#787c7e;
+    --header-h:50px;
+    --gap:5px;
+    --kb-gap:6px;
+    --maxw:500px;
+    --tile-size:62px;
+    --radius-key:4px;
+    --radius-modal:8px;
+    --shadow-modal:0 4px 23px 0 rgba(0,0,0,0.2);
   }
-  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent; touch-action:manipulation !important;}
-  html, body{ touch-action:manipulation !important; }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
+  html, body{ touch-action:manipulation; }
   html,body{
     margin:0; padding:0;
     background:var(--bg); color:var(--text);
-    font-family:'Heebo', Arial, sans-serif;
+    font-family:'Heebo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overscroll-behavior:none;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
   }
   body{
     display:flex; flex-direction:column;
     min-height:100vh;
     min-height:100dvh;
     height:100dvh;
+    height:100svh;
   }
   header{
     display:flex; align-items:center; justify-content:center;
     position:relative;
+    height:var(--header-h);
+    min-height:var(--header-h);
     border-bottom:1px solid var(--border);
-    padding:12px 12px;
+    padding:0 12px;
+    padding-top:env(safe-area-inset-top);
     user-select:none;
     flex-shrink:0;
+    background:var(--bg);
   }
   header h1{
-    font-size:clamp(22px,6vw,32px);
-    letter-spacing:4px;
+    font-size:28px;
+    letter-spacing:0.05em;
     margin:0;
     font-weight:800;
+    line-height:1;
+  }
+  @media (max-width:380px){
+    header h1{ font-size:24px; }
   }
   .icon-btn{
     position:absolute;
     top:50%; transform:translateY(-50%);
     background:none; border:none; cursor:pointer;
     color:var(--text);
-    width:34px; height:34px;
+    width:40px; height:40px;
     display:flex; align-items:center; justify-content:center;
     border-radius:50%;
+    padding:0;
+    transition:background 0.15s ease;
   }
-  .icon-btn:hover{ background:rgba(0,0,0,0.06); }
-  .icon-help{ right:8px; }
-  .icon-stats{ left:8px; }
+  .icon-btn:hover{ background:rgba(0,0,0,0.05); }
+  .icon-btn:active{ background:rgba(0,0,0,0.1); }
+  .icon-btn svg{ display:block; }
+  .icon-help{ right:4px; }
+  .icon-stats{ left:4px; }
 
   main{
     flex:1 1 auto;
     min-height:0;
-    display:flex; flex-direction:column; align-items:center;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
     width:100%; max-width:var(--maxw); margin:0 auto;
-    padding:10px 8px 4px;
-    gap:0;
+    padding:8px 8px 0;
   }
 
   #board{
     display:flex; flex-direction:column; gap:var(--gap);
-    margin-top:auto;
-    margin-bottom:clamp(10px, 3.2vh, 20px);
-    padding:6px 0;
+    margin:0 auto;
+    padding:0;
+    perspective:1000px;
   }
-  .row{ display:flex; flex-direction:row; gap:var(--gap); }
+  .row{
+    display:flex; flex-direction:row; gap:var(--gap);
+    justify-content:center;
+  }
   .tile{
     width:var(--tile-size); height:var(--tile-size);
     display:flex; align-items:center; justify-content:center;
-    font-size:calc(var(--tile-size) * 0.5);
+    font-size:calc(var(--tile-size) * 0.52);
     font-weight:700;
+    line-height:1;
     border:2px solid var(--border);
     color:var(--text);
     text-transform:uppercase;
     background:var(--bg);
-    transition: transform 0.1s;
+    user-select:none;
+    transform-style:preserve-3d;
   }
-  .tile.filled{ border-color:var(--border-strong); animation:pop 0.1s ease; }
+  .tile.filled{
+    border-color:var(--border-strong);
+    animation:pop 0.1s ease;
+  }
   .tile.reveal{
     color:#fff;
-    border-color: transparent;
+    border-color:transparent;
   }
   .tile.correct{ background:var(--correct); }
   .tile.present{ background:var(--present); }
   .tile.absent{ background:var(--absent); }
-  .tile.flip-in{ animation: flipIn 0.22s linear forwards; }
-  .tile.flip-out{ animation: flipOut 0.22s linear forwards; }
+  .tile.flip-in{ animation:flipIn 0.25s linear forwards; }
+  .tile.flip-out{ animation:flipOut 0.25s linear forwards; }
   @keyframes flipIn{
-    0%{ transform: rotateX(0deg); }
-    100%{ transform: rotateX(90deg); }
+    0%{ transform:rotateX(0deg); }
+    100%{ transform:rotateX(90deg); }
   }
   @keyframes flipOut{
-    0%{ transform: rotateX(90deg); }
-    100%{ transform: rotateX(0deg); }
+    0%{ transform:rotateX(90deg); }
+    100%{ transform:rotateX(0deg); }
   }
   @keyframes pop{
-    0%{ transform:scale(0.9); }
-    40%{ transform:scale(1.05); }
-    100%{ transform:scale(1); }
+    0%{ transform:scale(0.8); opacity:0; }
+    40%{ transform:scale(1.1); opacity:1; }
+    100%{ transform:scale(1); opacity:1; }
   }
-  .row.shake{ animation: shake 0.5s; }
+  .row.shake{ animation:shake 0.6s ease; }
   @keyframes shake{
     10%,90%{ transform:translateX(-1px); }
     20%,80%{ transform:translateX(2px); }
     30%,50%,70%{ transform:translateX(-4px); }
     40%,60%{ transform:translateX(4px); }
   }
-  .row.bounce .tile{ animation: bounce 0.6s ease; }
+  .row.bounce .tile{ animation:bounce 1s ease; }
+  .row.bounce .tile:nth-child(1){ animation-delay:0s; }
+  .row.bounce .tile:nth-child(2){ animation-delay:0.1s; }
+  .row.bounce .tile:nth-child(3){ animation-delay:0.2s; }
+  .row.bounce .tile:nth-child(4){ animation-delay:0.3s; }
+  .row.bounce .tile:nth-child(5){ animation-delay:0.4s; }
   @keyframes bounce{
-    0%,100%{ transform:translateY(0); }
-    20%{ transform:translateY(-18px); }
-    40%{ transform:translateY(0); }
-    50%{ transform:translateY(-6px); }
-    60%{ transform:translateY(0); }
+    0%,20%{ transform:translateY(0); }
+    40%{ transform:translateY(-30px); }
+    50%{ transform:translateY(5px); }
+    60%{ transform:translateY(-15px); }
+    80%{ transform:translateY(2px); }
+    100%{ transform:translateY(0); }
   }
 
   #keyboard{
     width:100%;
     max-width:500px;
-    display:flex; flex-direction:column; gap:7px;
-    padding-bottom:calc(env(safe-area-inset-bottom) + 54px);
+    display:flex; flex-direction:column; gap:var(--kb-gap);
+    padding:0 6px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    margin-top:auto;
     user-select:none;
+    flex-shrink:0;
   }
-  .kb-row{ display:flex; flex-direction:row; direction:ltr; gap:6px; justify-content:center; }
+  .kb-row{
+    display:flex; flex-direction:row; direction:ltr;
+    gap:var(--kb-gap); justify-content:center;
+    width:100%;
+  }
   .key{
     flex:1;
     min-width:0;
-    max-width:44px;
-    height:clamp(44px, 12vw, 56px);
-    border-radius:6px;
+    max-width:43px;
+    height:58px;
+    border-radius:var(--radius-key);
     border:none;
     background:var(--key-bg);
     color:var(--key-text);
     font-family:inherit;
-    font-weight:600;
-    font-size:clamp(14px, 4vw, 17px);
+    font-weight:700;
+    font-size:1.1rem;
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
     padding:0;
-    transition: background 0.1s ease;
+    transition:background 0.12s ease, color 0.12s ease;
+    -webkit-user-select:none;
+    user-select:none;
   }
-  .key:active{ background:var(--border-strong); }
-  .key.wide{ flex:1.7; max-width:66px; font-size:clamp(11px, 3vw, 13px); }
+  .key:active{ filter:brightness(0.92); }
+  .key.wide{
+    flex:1.55;
+    max-width:65px;
+    font-size:0.75rem;
+    font-weight:700;
+    letter-spacing:0.01em;
+  }
   .key.correct{ background:var(--correct); color:#fff; }
   .key.present{ background:var(--present); color:#fff; }
   .key.absent{ background:var(--absent); color:#fff; }
+  @media (max-width:380px){
+    .key{ height:52px; font-size:1rem; max-width:40px; }
+    .key.wide{ max-width:58px; font-size:0.7rem; }
+    #keyboard{ gap:5px; padding-left:4px; padding-right:4px; }
+    .kb-row{ gap:5px; }
+  }
+  @media (min-width:500px){
+    .key{ height:58px; max-width:46px; }
+    .key.wide{ max-width:68px; }
+  }
 
   #toast-wrap{
-    position:fixed; top:70px; left:0; right:0;
-    display:flex; justify-content:center;
+    position:fixed;
+    top:calc(var(--header-h) + env(safe-area-inset-top, 0px) + 16px);
+    left:0; right:0;
+    display:flex; flex-direction:column; align-items:center;
     z-index:50; pointer-events:none;
+    padding:0 16px;
   }
   .toast{
     background:var(--text); color:#fff;
-    padding:12px 20px; border-radius:6px;
-    font-weight:600; font-size:14px;
+    padding:12px 16px; border-radius:4px;
+    font-weight:700; font-size:14px;
     margin-bottom:8px;
-    animation: toastin 0.15s ease;
+    box-shadow:0 2px 8px rgba(0,0,0,0.18);
+    animation:toastin 0.15s ease;
   }
-  @keyframes toastin{ from{opacity:0; transform:translateY(-8px);} to{opacity:1; transform:translateY(0);} }
-
+  @keyframes toastin{
+    from{ opacity:0; transform:translateY(-12px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
   .toast.bold{
-    background:#111;
+    background:#1a1a1b;
     color:#fff;
-    border:2px solid #d4af37;
-    padding:18px 32px;
-    font-size:19px;
+    border:2px solid #c9b458;
+    padding:16px 28px;
+    font-size:17px;
     font-weight:800;
-    letter-spacing:0.5px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-    animation: toastPop 0.35s cubic-bezier(.34,1.56,.64,1);
+    letter-spacing:0.02em;
+    box-shadow:0 8px 24px rgba(0,0,0,0.28);
+    animation:toastPop 0.35s cubic-bezier(.34,1.56,.64,1);
   }
   @keyframes toastPop{
     0%{ opacity:0; transform:scale(0.7) translateY(-14px); }
@@ -191,41 +255,85 @@
     100%{ opacity:1; transform:scale(1) translateY(0); }
   }
 
-  /* Modal (help) */
   .modal-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,0.5);
+    position:fixed; inset:0;
+    background:rgba(255,255,255,0.5);
     display:none; align-items:center; justify-content:center;
-    z-index:80; padding:20px;
+    z-index:80; padding:16px;
+    backdrop-filter:blur(2px);
+    -webkit-backdrop-filter:blur(2px);
   }
   .modal-overlay.show{ display:flex; }
   .modal{
-    background:var(--bg); border-radius:8px;
-    max-width:420px; width:100%;
-    padding:24px 20px; position:relative;
-    max-height:85vh; overflow-y:auto;
+    background:var(--bg);
+    border-radius:var(--radius-modal);
+    border:1px solid var(--border);
+    box-shadow:var(--shadow-modal);
+    max-width:400px; width:100%;
+    padding:28px 24px 24px;
+    position:relative;
+    max-height:min(85vh, 640px);
+    overflow-y:auto;
+    animation:modalIn 0.2s ease;
   }
-  .modal h2{ margin:0 0 12px; font-size:20px; }
-  .modal p{ font-size:14px; line-height:1.6; margin:8px 0; }
-  .modal .example{ display:flex; flex-direction:row; gap:4px; margin:10px 0; }
-  .modal .example .tile{ width:36px; height:36px; font-size:18px; }
+  @keyframes modalIn{
+    from{ opacity:0; transform:translateY(12px) scale(0.98); }
+    to{ opacity:1; transform:translateY(0) scale(1); }
+  }
+  .modal h2{
+    margin:0 0 16px;
+    font-size:18px;
+    font-weight:800;
+    letter-spacing:0.04em;
+    text-align:center;
+    text-transform:uppercase;
+  }
+  .modal p{
+    font-size:14px;
+    line-height:1.55;
+    margin:10px 0;
+    color:var(--text);
+  }
+  .modal p b{ font-weight:800; }
+  .modal .example{
+    display:flex; flex-direction:row; gap:5px;
+    margin:14px 0 8px;
+    justify-content:flex-start;
+  }
+  .modal .example .tile{
+    width:40px; height:40px; font-size:20px;
+  }
   .modal-close{
-    position:absolute; left:14px; top:14px;
-    background:none; border:none; font-size:20px; cursor:pointer; color:var(--text);
+    position:absolute; left:10px; top:10px;
+    background:none; border:none;
+    width:36px; height:36px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; line-height:1;
+    cursor:pointer; color:var(--muted);
+    border-radius:50%;
+    transition:background 0.15s ease, color 0.15s ease;
+  }
+  .modal-close:hover{
+    background:rgba(0,0,0,0.06);
+    color:var(--text);
   }
 
   .choice-row{
-    display:flex; gap:10px; justify-content:center; margin-top:18px;
+    display:flex; gap:10px; justify-content:center; margin-top:20px;
+    flex-wrap:wrap;
   }
   .choice-btn{
-    flex:1; max-width:180px;
+    flex:1; min-width:120px; max-width:180px;
     padding:12px 16px;
-    border-radius:6px;
-    font-family:'Heebo', sans-serif;
+    border-radius:var(--radius-key);
+    font-family:inherit;
     font-weight:700;
     font-size:14px;
     cursor:pointer;
     border:2px solid transparent;
+    transition:background 0.15s ease, border-color 0.15s ease, filter 0.1s ease;
   }
+  .choice-btn:active{ filter:brightness(0.95); }
   .choice-btn.primary{
     background:var(--text);
     color:#fff;
@@ -234,6 +342,29 @@
     background:var(--bg);
     color:var(--text);
     border-color:var(--border-strong);
+  }
+  .choice-btn.secondary:hover{ border-color:var(--text); }
+
+  @media (max-height:700px){
+    .key{ height:52px; }
+    header h1{ font-size:24px; }
+  }
+  @media (max-height:620px){
+    .key{ height:46px; font-size:0.95rem; }
+    #keyboard{ gap:4px; }
+    .kb-row{ gap:4px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tile.filled,
+    .tile.flip-in,
+    .tile.flip-out,
+    .row.shake,
+    .row.bounce .tile,
+    .toast,
+    .toast.bold,
+    .modal{
+      animation:none !important;
+    }
   }
 
   /* ===== Reveal overlay (surprise) — Art Deco cabaret ===== */
@@ -457,13 +588,6 @@
   }
   .reveal-tickets-link:hover{ color:var(--brass-soft); border-color:var(--brass); }
 
-  @media (max-height:680px){
-    #board{ padding:2px 0; margin-bottom:12px; }
-    main{ gap:4px; padding-top:4px; }
-  }
-  @media (max-height:620px){
-    #keyboard{ gap:4px; }
-  }
   @media (prefers-reduced-motion: reduce){
     #reveal-overlay .curtain,
     #reveal-overlay .sunburst,
@@ -479,12 +603,12 @@
 <body>
 
 <header>
-  <button class="icon-btn icon-help" id="helpBtn" aria-label="איך משחקים">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M9.5 9a2.5 2.5 0 1 1 3.4 2.3c-.8.4-1.4 1-1.4 1.9v.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1" fill="currentColor"/></svg>
+  <button class="icon-btn icon-help" id="helpBtn" aria-label="איך משחקים" type="button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9.25" stroke="currentColor" stroke-width="1.75"/><path d="M9.6 9.2a2.4 2.4 0 1 1 3.55 2.1c-.55.35-.95.85-.95 1.55v.25" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="12" cy="16.75" r="1.05" fill="currentColor"/></svg>
   </button>
   <h1>וורדל</h1>
-  <button class="icon-btn icon-stats" id="statsBtn" aria-label="סטטיסטיקה">
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="4" height="8" fill="currentColor"/><rect x="10" y="6" width="4" height="14" fill="currentColor"/><rect x="16" y="9" width="4" height="11" fill="currentColor"/></svg>
+  <button class="icon-btn icon-stats" id="statsBtn" aria-label="סטטיסטיקה" type="button">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4.5" y="12" width="3.5" height="7.5" rx="0.5" fill="currentColor"/><rect x="10.25" y="6.5" width="3.5" height="13" rx="0.5" fill="currentColor"/><rect x="16" y="9" width="3.5" height="10.5" rx="0.5" fill="currentColor"/></svg>
   </button>
 </header>
 
@@ -496,9 +620,9 @@
 </main>
 
 <div class="modal-overlay" id="helpModal">
-  <div class="modal">
-    <button class="modal-close" id="helpClose">✕</button>
-    <h2>איך משחקים</h2>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <button class="modal-close" id="helpClose" type="button" aria-label="סגור">×</button>
+    <h2 id="helpTitle">איך משחקים</h2>
     <p>נחשו את המילה בת 5 האותיות תוך 6 ניסיונות.</p>
     <p>אחרי כל ניסיון, צבע האריחים ישתנה כדי להראות עד כמה הניחוש קרוב למילה.</p>
     <div class="example">
@@ -529,20 +653,20 @@
 </div>
 
 <div class="modal-overlay" id="statsModal">
-  <div class="modal">
-    <button class="modal-close" id="statsClose">✕</button>
-    <h2>סטטיסטיקה</h2>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="statsTitle">
+    <button class="modal-close" id="statsClose" type="button" aria-label="סגור">×</button>
+    <h2 id="statsTitle">סטטיסטיקה</h2>
     <p id="statsText">שחקו כדי לראות נתונים</p>
   </div>
 </div>
 
 <div class="modal-overlay" id="loseModal">
-  <div class="modal" style="text-align:center;">
-    <h2>נגמרו הניסיונות</h2>
+  <div class="modal" style="text-align:center;" role="dialog" aria-modal="true" aria-labelledby="loseTitle">
+    <h2 id="loseTitle">נגמרו הניסיונות</h2>
     <p>אפשר להתחיל מהתחלה, או להמשיך מהניחוש האחרון שלך.</p>
     <div class="choice-row">
-      <button class="choice-btn secondary" id="loseRestart">התחלה מחדש</button>
-      <button class="choice-btn primary" id="loseContinue">המשך מכאן</button>
+      <button class="choice-btn secondary" id="loseRestart" type="button">התחלה מחדש</button>
+      <button class="choice-btn primary" id="loseContinue" type="button">המשך מכאן</button>
     </div>
   </div>
 </div>
@@ -896,26 +1020,23 @@
     const kb = document.getElementById('keyboard');
     const boardEl = document.getElementById('board');
     const mainStyle = getComputedStyle(mainEl);
-    const boardStyle = getComputedStyle(boardEl);
     const padTop = parseFloat(mainStyle.paddingTop) || 0;
     const padBottom = parseFloat(mainStyle.paddingBottom) || 0;
-    const boardPadTop = parseFloat(boardStyle.paddingTop) || 0;
-    const boardPadBottom = parseFloat(boardStyle.paddingBottom) || 0;
-    const desiredGap = window.innerHeight <= 620 ? 12 : 20;
+    const desiredGap = window.innerHeight <= 620 ? 10 : 18;
     const vv = window.visualViewport;
     const viewportH = vv ? vv.height : window.innerHeight;
     const headerH = header.getBoundingClientRect().height;
     const kbH = kb.getBoundingClientRect().height;
-    const available = viewportH - headerH - padTop - padBottom - boardPadTop - boardPadBottom - kbH - desiredGap;
+    const available = viewportH - headerH - padTop - padBottom - kbH - desiredGap;
 
     const gapPx = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--gap')) || 5;
     const rows = 6;
     const tileFromHeight = (available - gapPx * (rows - 1)) / rows;
-    const widthCap = Math.min(window.innerWidth * 0.9, 340);
+    const widthCap = Math.min(window.innerWidth - 24, 350);
     const tileFromWidth = (widthCap - gapPx * 4) / 5;
 
-    const tile = Math.max(30, Math.min(tileFromHeight, tileFromWidth));
-    document.documentElement.style.setProperty('--tile-size', tile + 'px');
+    const tile = Math.max(32, Math.min(62, tileFromHeight, tileFromWidth));
+    document.documentElement.style.setProperty('--tile-size', Math.floor(tile) + 'px');
     boardEl.style.marginBottom = desiredGap + 'px';
   }
 
