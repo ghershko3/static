@@ -496,15 +496,18 @@
 
   /* Deco top frieze: stepped brass band with a centered chevron motif */
   .frieze{
-    position:absolute; top:0; left:0; right:0; height:46px; z-index:6;
+    position:absolute; top:0; left:0; right:0; z-index:6;
+    height:calc(40px + env(safe-area-inset-top, 0px));
+    padding-top:env(safe-area-inset-top, 0px);
     background: linear-gradient(180deg, #0c2820, #081c17);
     border-bottom:1px solid rgba(200,162,76,0.55);
+    box-sizing:border-box;
   }
   .frieze::before{
-    content:''; position:absolute; left:50%; top:8px; transform:translateX(-50%);
+    content:''; position:absolute; left:50%; top:calc(env(safe-area-inset-top, 0px) + 6px); transform:translateX(-50%);
     width:0; height:0;
-    border-left:14px solid transparent; border-right:14px solid transparent;
-    border-top:14px solid var(--brass);
+    border-left:12px solid transparent; border-right:12px solid transparent;
+    border-top:12px solid var(--brass);
     opacity:0.9;
   }
   .frieze::after{
@@ -523,107 +526,158 @@
   .reveal-content{
     position:relative; z-index:7;
     display:flex; flex-direction:column; align-items:center;
-    gap:0; padding:24px;
+    gap:0;
+    padding:
+      max(20px, calc(env(safe-area-inset-top, 0px) + 28px))
+      20px
+      max(20px, calc(env(safe-area-inset-bottom, 0px) + 20px));
     opacity:0; transform:translateY(16px);
-    transition: opacity 1s ease, transform 1s cubic-bezier(.22,1,.36,1);
+    transition: opacity 0.85s ease, transform 0.85s cubic-bezier(.22,1,.36,1);
     text-align:center;
     max-width:400px;
+    width:100%;
+    max-height:100%;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
   }
   #reveal-overlay.opening .reveal-content{
     opacity:1; transform:translateY(0);
-    transition-delay:2.4s;
+    transition-delay:2s;
   }
 
   .reveal-eyebrow{
-    font-family:'Fjalla One', sans-serif;
+    font-family:'Heebo', sans-serif;
+    font-weight:700;
     color:var(--brass);
-    letter-spacing:6px;
-    font-size:12px;
-    margin-bottom:14px;
+    letter-spacing:0.28em;
+    font-size:11px;
+    margin-bottom:12px;
   }
 
-  /* portrait in a stepped Deco brass frame */
   .reveal-frame{
     position:relative;
-    padding:6px;
+    padding:5px;
     background: linear-gradient(180deg, var(--brass-soft), var(--brass) 40%, var(--brass-deep));
-    box-shadow: 0 30px 80px rgba(0,0,0,0.75);
+    box-shadow: 0 24px 60px rgba(0,0,0,0.7);
+    flex-shrink:0;
   }
   .reveal-frame::before{
-    content:''; position:absolute; inset:6px;
+    content:''; position:absolute; inset:5px;
     border:2px solid var(--ink);
     pointer-events:none; z-index:2;
   }
-  /* Deco corner notches */
   .reveal-frame::after{
-    content:''; position:absolute; inset:-6px;
+    content:''; position:absolute; inset:-5px;
     background:
       linear-gradient(135deg, var(--brass) 0 10px, transparent 10px) top left,
       linear-gradient(225deg, var(--brass) 0 10px, transparent 10px) top right,
       linear-gradient(45deg, var(--brass) 0 10px, transparent 10px) bottom left,
       linear-gradient(315deg, var(--brass) 0 10px, transparent 10px) bottom right;
-    background-size:16px 16px; background-repeat:no-repeat;
+    background-size:14px 14px; background-repeat:no-repeat;
     pointer-events:none;
   }
   .reveal-photo{
     display:block;
-    width:min(70vw, 300px);
+    width:min(58vw, 260px);
+    max-height:min(38vh, 280px);
+    object-fit:cover;
+    object-position:center top;
     filter: saturate(0.92) contrast(1.02);
   }
 
   .reveal-title{
-    font-family:'Fjalla One', sans-serif;
-    font-size:clamp(30px, 8vw, 46px);
-    letter-spacing:3px;
+    font-family:'Heebo', sans-serif;
+    font-weight:800;
+    font-size:clamp(26px, 7vw, 40px);
+    letter-spacing:0.04em;
     color:var(--cream);
-    margin:20px 0 0;
-    line-height:1;
+    margin:14px 0 0;
+    line-height:1.15;
   }
   .reveal-divider{
     display:flex; align-items:center; gap:10px;
-    margin:12px 0 4px; color:var(--brass);
+    margin:10px 0 2px; color:var(--brass);
   }
   .reveal-divider::before,
   .reveal-divider::after{
-    content:''; height:1px; width:40px;
+    content:''; height:1px; width:36px;
     background: linear-gradient(90deg, transparent, var(--brass));
   }
   .reveal-divider::after{ background: linear-gradient(90deg, var(--brass), transparent); }
   .reveal-divider span{ font-size:10px; letter-spacing:2px; }
 
   .reveal-sub{
-    color:rgba(243,234,210,0.7);
+    color:rgba(243,234,210,0.72);
     font-family:'Heebo', sans-serif;
-    font-size:14px; font-weight:400; line-height:1.75;
-    max-width:320px;
-    margin-bottom:22px;
+    font-size:13px; font-weight:400; line-height:1.65;
+    max-width:300px;
+    margin:0 0 18px;
   }
+
+  .reveal-actions{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    max-width:280px;
+  }
+
+  .reveal-tickets{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    background:var(--brass);
+    color:var(--ink);
+    border:1px solid var(--brass-soft);
+    padding:14px 22px;
+    font-family:'Heebo', sans-serif;
+    font-weight:800;
+    letter-spacing:0.06em;
+    font-size:14px;
+    text-decoration:none;
+    transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease;
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  .reveal-tickets:hover{
+    background:var(--brass-soft);
+  }
+  .reveal-tickets:active{ transform:scale(0.98); }
 
   .reveal-btn{
     background:transparent;
-    color:var(--brass-soft);
-    border:1px solid var(--brass);
-    padding:13px 34px;
-    font-family:'Fjalla One', sans-serif;
-    letter-spacing:2px;
-    font-size:14px;
-    cursor:pointer;
-    max-width:300px;
-    transition: background 0.25s ease, color 0.25s ease, transform 0.12s ease;
-  }
-  .reveal-btn:hover{ background:var(--brass); color:var(--ink); }
-
-  .reveal-tickets-link{
-    display:inline-block;
-    margin-top:16px;
-    color:rgba(228,205,143,0.75);
+    color:rgba(228,205,143,0.85);
+    border:none;
+    border-bottom:1px solid rgba(200,162,76,0.35);
+    border-radius:0;
+    padding:6px 4px;
     font-family:'Heebo', sans-serif;
-    font-weight:500; font-size:12px; letter-spacing:1px;
-    text-decoration:none;
-    border-bottom:1px solid rgba(200,162,76,0.4);
-    padding-bottom:2px;
+    font-weight:500;
+    letter-spacing:0.02em;
+    font-size:13px;
+    cursor:pointer;
+    max-width:100%;
+    transition: color 0.2s ease, border-color 0.2s ease, transform 0.12s ease;
   }
-  .reveal-tickets-link:hover{ color:var(--brass-soft); border-color:var(--brass); }
+  .reveal-btn:hover{
+    color:var(--brass-soft);
+    border-bottom-color:var(--brass);
+  }
+
+  @media (max-height:720px){
+    .reveal-photo{ width:min(48vw, 200px); max-height:min(30vh, 200px); }
+    .reveal-title{ font-size:clamp(22px, 6vw, 32px); margin-top:10px; }
+    .reveal-eyebrow{ margin-bottom:8px; }
+    .reveal-sub{ font-size:12px; margin-bottom:14px; line-height:1.5; }
+    .reveal-content{ padding-left:16px; padding-right:16px; }
+  }
+  @media (max-height:600px){
+    .reveal-photo{ width:min(40vw, 150px); max-height:min(24vh, 150px); }
+    .reveal-frame{ padding:3px; }
+    .reveal-divider{ margin:6px 0 0; }
+    .reveal-tickets{ padding:12px 18px; font-size:13px; }
+  }
 
   @media (prefers-reduced-motion: reduce){
     #reveal-overlay .curtain,
@@ -725,8 +779,10 @@
     <div class="reveal-title">נכון מאוד<br>קברט</div>
     <div class="reveal-divider"><span>◆</span></div>
     <div class="reveal-sub">הפעם מקווה שנצליח לראות יותר מ-78% מהמופע</div>
-    <button class="reveal-btn" id="revealClose">איזה כיף!</button>
-    <a class="reveal-tickets-link" href="https://tickets.cameri.co.il/edocument/5e5a945f-2e2e-417c-a395-e0e4a0b43408/?id=291817141041720" target="_blank" rel="noopener noreferrer">לצפייה בכרטיסים</a>
+    <div class="reveal-actions">
+      <a class="reveal-tickets" href="https://tickets.cameri.co.il/edocument/5e5a945f-2e2e-417c-a395-e0e4a0b43408/?id=291817141041720" target="_blank" rel="noopener noreferrer">לצפייה בכרטיסים</a>
+      <button class="reveal-btn" id="revealClose" type="button">איזה כיף!</button>
+    </div>
   </div>
 </div>
 
